@@ -1,0 +1,19 @@
+[package]
+name = "bevy_settings"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bevy = { workspace = true }
+bevy_settings_derive = { path = "../bevy_settings_derive" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+bincode = { workspace = true }
+thiserror = { workspace = true }
+
+# For examples only
+[dev-dependencies]
+bevy = { workspace = true, features = ["bevy_render", "bevy_core_pipeline"] }
