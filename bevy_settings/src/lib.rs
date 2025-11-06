@@ -5,8 +5,61 @@
 //! - Persists only deviations from default values
 //! - Supports JSON and binary serialization formats
 //! - Provides a derive macro to reduce boilerplate
+//! - Offers multiple APIs: fluent `SettingsStore`, unified `SettingsPlugin`, and legacy `TypedSettingsPlugin`
 //!
-//! ## Example
+//! ## Quick Start with SettingsStore (Recommended)
+//! ```no_run
+//! use bevy::prelude::*;
+//! use bevy_settings::{Settings, SettingsStore, SerializationFormat};
+//! use serde::{Deserialize, Serialize};
+//!
+//! #[derive(Settings, Resource, Serialize, Deserialize, Default, Clone, PartialEq)]
+//! struct GameSettings {
+//!     volume: f32,
+//!     resolution: (u32, u32),
+//! }
+//!
+//! #[derive(Settings, Resource, Serialize, Deserialize, Default, Clone, PartialEq)]
+//! struct AudioSettings {
+//!     master_volume: f32,
+//! }
+//!
+//! App::new()
+//!     .add_plugins(DefaultPlugins)
+//!     .add_plugins(
+//!         SettingsStore::new("GameSettings")
+//!             .format(SerializationFormat::Json)
+//!             .version("0.1.0")
+//!             .with_base_path("settings")
+//!             .register::<GameSettings>()
+//!             .register::<AudioSettings>()
+//!     )
+//!     .run();
+//! ```
+//!
+//! ## Using SettingsStore as a Resource
+//! ```no_run
+//! use bevy::prelude::*;
+//! use bevy_settings::{Settings, SettingsStore, SerializationFormat};
+//! use serde::{Deserialize, Serialize};
+//!
+//! #[derive(Settings, Resource, Serialize, Deserialize, Default, Clone, PartialEq)]
+//! struct GameSettings {
+//!     volume: f32,
+//! }
+//!
+//! let settings_store = SettingsStore::new("GameSettings")
+//!     .format(SerializationFormat::Json)
+//!     .with_base_path("settings")
+//!     .register::<GameSettings>();
+//!
+//! App::new()
+//!     .add_plugins(DefaultPlugins)
+//!     .insert_resource(settings_store)
+//!     .run();
+//! ```
+//!
+//! ## Alternative API with SettingsPlugin
 //! ```no_run
 //! use bevy::prelude::*;
 //! use bevy_settings::{Settings, SettingsPlugin, SettingsConfig, SerializationFormat};
