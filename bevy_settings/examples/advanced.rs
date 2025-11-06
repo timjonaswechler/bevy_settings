@@ -77,18 +77,21 @@ fn main() {
     let mut app = App::new();
 
     app.add_plugins(MinimalPlugins)
-        // Add multiple settings with different formats
+        // Add multiple settings with different formats using the new API
         .add_plugins(
-            SettingsPlugin::<VideoSettings>::new("video", SerializationFormat::Json)
-                .with_base_path("config"),
-        )
-        .add_plugins(
-            SettingsPlugin::<AudioSettings>::new("audio", SerializationFormat::Json)
-                .with_base_path("config"),
-        )
-        .add_plugins(
-            SettingsPlugin::<GameplaySettings>::new("gameplay", SerializationFormat::Binary)
-                .with_base_path("config"),
+            SettingsPlugin::new()
+                .register::<VideoSettings>(
+                    SettingsConfig::new("video", SerializationFormat::Json)
+                        .with_base_path("config"),
+                )
+                .register::<AudioSettings>(
+                    SettingsConfig::new("audio", SerializationFormat::Json)
+                        .with_base_path("config"),
+                )
+                .register::<GameplaySettings>(
+                    SettingsConfig::new("gameplay", SerializationFormat::Binary)
+                        .with_base_path("config"),
+                ),
         )
         .add_systems(Startup, print_initial_settings)
         .add_systems(Update, (modify_settings, check_and_exit).chain());

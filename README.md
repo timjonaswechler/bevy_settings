@@ -31,7 +31,7 @@ use bevy::prelude::*;
 use bevy_settings::{prelude::*, Settings};
 use serde::{Deserialize, Serialize};
 
-// Define your settings struct
+// Define your settings structs
 #[derive(Settings, Resource, Serialize, Deserialize, Default, Clone, PartialEq)]
 struct GameSettings {
     volume: f32,
@@ -39,20 +39,30 @@ struct GameSettings {
     fullscreen: bool,
 }
 
+#[derive(Settings, Resource, Serialize, Deserialize, Default, Clone, PartialEq)]
+struct GraphicsSettings {
+    quality: i32,
+}
+
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        // Add the settings plugin
-        .add_plugins(SettingsPlugin::<GameSettings>::new(
-            "game_settings",
-            SerializationFormat::Json,
-        ))
+        // Register all settings with a single plugin
+        .add_plugins(
+            SettingsPlugin::new()
+                .register::<GameSettings>(
+                    SettingsConfig::new("game_settings", SerializationFormat::Json)
+                )
+                .register::<GraphicsSettings>(
+                    SettingsConfig::new("graphics_settings", SerializationFormat::Json)
+                )
+        )
         .run();
 }
 ```
 
 That's it! Your settings will be:
-- Loaded from `settings/game_settings.json` on startup (or defaults if file doesn't exist)
+- Loaded from `settings/*.json` on startup (or defaults if files don't exist)
 - Automatically saved when modified
 - Only stored if they differ from defaults
 
@@ -80,21 +90,26 @@ Required trait implementations:
 ### Adding to Your App
 
 ```rust
-use bevy_settings::{SettingsPlugin, SerializationFormat};
+use bevy_settings::{SettingsPlugin, SettingsConfig, SerializationFormat};
 
 App::new()
-    .add_plugins(SettingsPlugin::<MySettings>::new(
-        "my_settings",           // Settings file name
-        SerializationFormat::Json // or SerializationFormat::Binary
-    ))
+    .add_plugins(
+        SettingsPlugin::new()
+            .register::<MySettings>(
+                SettingsConfig::new("my_settings", SerializationFormat::Json)
+            )
+    )
     .run();
 ```
 
 ### Custom Settings Path
 
 ```rust
-SettingsPlugin::<MySettings>::new("my_settings", SerializationFormat::Json)
-    .with_base_path("custom/path")
+SettingsPlugin::new()
+    .register::<MySettings>(
+        SettingsConfig::new("my_settings", SerializationFormat::Json)
+            .with_base_path("custom/path")
+    )
 ```
 
 ### Reading Settings
@@ -161,7 +176,7 @@ Creates compact `.bin` files using [bincode](https://github.com/bincode-org/binc
 
 ### Multiple Settings
 
-You can have multiple settings types:
+You can register multiple settings types with a single plugin:
 
 ```rust
 #[derive(Settings, Resource, Serialize, Deserialize, Default, Clone, PartialEq)]
@@ -171,12 +186,15 @@ struct GameSettings { /* ... */ }
 struct GraphicsSettings { /* ... */ }
 
 App::new()
-    .add_plugins(SettingsPlugin::<GameSettings>::new(
-        "game", SerializationFormat::Json
-    ))
-    .add_plugins(SettingsPlugin::<GraphicsSettings>::new(
-        "graphics", SerializationFormat::Json
-    ))
+    .add_plugins(
+        SettingsPlugin::new()
+            .register::<GameSettings>(
+                SettingsConfig::new("game", SerializationFormat::Json)
+            )
+            .register::<GraphicsSettings>(
+                SettingsConfig::new("graphics", SerializationFormat::Json)
+            )
+    )
     .run();
 ```
 
@@ -198,14 +216,17 @@ fn on_settings_change(settings: Res<MySettings>) {
 Run the examples:
 
 ```bash
-# Basic interactive example
-cargo run --example basic
-
 # Simple automated example
 cargo run --example simple
 
+# Basic interactive example
+cargo run --example basic
+
 # Advanced example with nested structs, enums, and multiple formats
 cargo run --example advanced
+
+# New API example showing the simplified registration
+cargo run --example new_api
 ```
 
 ## How It Works

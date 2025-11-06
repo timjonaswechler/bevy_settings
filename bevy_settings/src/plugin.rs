@@ -2,7 +2,10 @@ use crate::{SerializationFormat, Settings, SettingsStorage};
 use bevy::prelude::*;
 use std::marker::PhantomData;
 
-/// Plugin for managing settings in Bevy
+/// Legacy plugin for managing a single settings type in Bevy (deprecated)
+///
+/// **Note:** This is the legacy API. For new code, use the new `SettingsPlugin`
+/// which allows registering multiple settings types with a single plugin.
 ///
 /// This plugin:
 /// - Loads settings from disk on startup
@@ -12,7 +15,7 @@ use std::marker::PhantomData;
 /// # Example
 /// ```no_run
 /// use bevy::prelude::*;
-/// use bevy_settings::{Settings, SettingsPlugin, SerializationFormat};
+/// use bevy_settings::{Settings, TypedSettingsPlugin, SerializationFormat};
 /// use serde::{Deserialize, Serialize};
 ///
 /// #[derive(Settings, Resource, Serialize, Deserialize, Default, Clone, PartialEq)]
@@ -21,7 +24,7 @@ use std::marker::PhantomData;
 /// }
 ///
 /// App::new()
-///     .add_plugins(SettingsPlugin::<GameSettings>::new(
+///     .add_plugins(TypedSettingsPlugin::<GameSettings>::new(
 ///         "game_settings",
 ///         SerializationFormat::Json,
 ///     ));

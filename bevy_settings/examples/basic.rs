@@ -38,15 +38,18 @@ enum GraphicsQuality {
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        // Add settings plugins - they will load settings on startup
-        .add_plugins(SettingsPlugin::<GameSettings>::new(
-            "game_settings",
-            SerializationFormat::Json,
-        ))
-        .add_plugins(SettingsPlugin::<GraphicsSettings>::new(
-            "graphics_settings",
-            SerializationFormat::Binary,
-        ))
+        // Add settings plugin - registers multiple settings types
+        .add_plugins(
+            SettingsPlugin::new()
+                .register::<GameSettings>(SettingsConfig::new(
+                    "game_settings",
+                    SerializationFormat::Json,
+                ))
+                .register::<GraphicsSettings>(SettingsConfig::new(
+                    "graphics_settings",
+                    SerializationFormat::Binary,
+                )),
+        )
         .add_systems(Startup, setup)
         .add_systems(Update, (handle_input, display_settings))
         .run();

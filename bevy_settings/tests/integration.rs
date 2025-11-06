@@ -35,8 +35,10 @@ fn test_plugin_loads_defaults() {
 
     let mut app = App::new();
     app.add_plugins(MinimalPlugins).add_plugins(
-        SettingsPlugin::<TestSettings>::new("test_settings", SerializationFormat::Json)
-            .with_base_path(get_test_path(test_name).to_str().unwrap()),
+        SettingsPlugin::new().register::<TestSettings>(
+            SettingsConfig::new("test_settings", SerializationFormat::Json)
+                .with_base_path(get_test_path(test_name).to_str().unwrap()),
+        ),
     );
 
     app.update();
@@ -55,8 +57,10 @@ fn test_plugin_saves_on_change() {
 
     let mut app = App::new();
     app.add_plugins(MinimalPlugins).add_plugins(
-        SettingsPlugin::<TestSettings>::new("test_settings", SerializationFormat::Json)
-            .with_base_path(get_test_path(test_name).to_str().unwrap()),
+        SettingsPlugin::new().register::<TestSettings>(
+            SettingsConfig::new("test_settings", SerializationFormat::Json)
+                .with_base_path(get_test_path(test_name).to_str().unwrap()),
+        ),
     );
 
     app.update();
@@ -92,8 +96,10 @@ fn test_plugin_loads_saved_settings() {
     {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins).add_plugins(
-            SettingsPlugin::<TestSettings>::new("test_settings", SerializationFormat::Json)
-                .with_base_path(get_test_path(test_name).to_str().unwrap()),
+            SettingsPlugin::new().register::<TestSettings>(
+                SettingsConfig::new("test_settings", SerializationFormat::Json)
+                    .with_base_path(get_test_path(test_name).to_str().unwrap()),
+            ),
         );
 
         app.update();
@@ -111,8 +117,10 @@ fn test_plugin_loads_saved_settings() {
     {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins).add_plugins(
-            SettingsPlugin::<TestSettings>::new("test_settings", SerializationFormat::Json)
-                .with_base_path(get_test_path(test_name).to_str().unwrap()),
+            SettingsPlugin::new().register::<TestSettings>(
+                SettingsConfig::new("test_settings", SerializationFormat::Json)
+                    .with_base_path(get_test_path(test_name).to_str().unwrap()),
+            ),
         );
 
         app.update();
@@ -132,8 +140,10 @@ fn test_delta_persistence() {
 
     let mut app = App::new();
     app.add_plugins(MinimalPlugins).add_plugins(
-        SettingsPlugin::<TestSettings>::new("test_settings", SerializationFormat::Json)
-            .with_base_path(get_test_path(test_name).to_str().unwrap()),
+        SettingsPlugin::new().register::<TestSettings>(
+            SettingsConfig::new("test_settings", SerializationFormat::Json)
+                .with_base_path(get_test_path(test_name).to_str().unwrap()),
+        ),
     );
 
     app.update();
@@ -175,8 +185,10 @@ fn test_binary_format() {
 
     let mut app = App::new();
     app.add_plugins(MinimalPlugins).add_plugins(
-        SettingsPlugin::<TestSettings>::new("test_settings", SerializationFormat::Binary)
-            .with_base_path(get_test_path(test_name).to_str().unwrap()),
+        SettingsPlugin::new().register::<TestSettings>(
+            SettingsConfig::new("test_settings", SerializationFormat::Binary)
+                .with_base_path(get_test_path(test_name).to_str().unwrap()),
+        ),
     );
 
     app.update();
