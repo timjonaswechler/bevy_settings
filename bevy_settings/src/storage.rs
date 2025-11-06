@@ -29,10 +29,10 @@ impl SettingsStorage {
             .join(format!("{}.{}", name, self.format.extension()))
     }
 
-    /// Load settings from disk, merging with defaults
+    /// Load settings from disk, or return defaults if not found
     /// 
-    /// Only the values that differ from defaults are stored, so this
-    /// loads the stored values and merges them with defaults.
+    /// If the settings file doesn't exist, returns the default values.
+    /// If it exists, loads the entire settings object from the file.
     pub fn load<T: Settings>(&self, name: &str) -> Result<T> {
         let path = self.get_path(name);
         
@@ -59,9 +59,10 @@ impl SettingsStorage {
     /// the entire settings object is saved.
     pub fn save<T: Settings>(&self, name: &str, settings: &T) -> Result<()> {
         let path = self.get_path(name);
+        let defaults = T::default();
         
         // If settings equal defaults, delete the file (no need to store defaults)
-        if settings == &T::default() {
+        if settings == &defaults {
             if path.exists() {
                 fs::remove_file(&path)?;
             }

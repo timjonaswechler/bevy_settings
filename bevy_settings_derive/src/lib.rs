@@ -35,4 +35,3 @@ pub fn derive_settings(input: TokenStream) -> TokenStream {
     
     TokenStream::from(expanded)
 }
-
