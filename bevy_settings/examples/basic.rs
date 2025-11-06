@@ -66,7 +66,7 @@ fn setup(
     info!("  Q - Cycle graphics quality");
     info!("  R - Reset to defaults");
     info!("  ESC - Exit");
-    
+
     commands.spawn(Camera2dBundle::default());
 }
 
@@ -112,19 +112,19 @@ fn handle_input(
     }
 }
 
-fn display_settings(
-    game_settings: Res<GameSettings>,
-    graphics_settings: Res<GraphicsSettings>,
-) {
+fn display_settings(game_settings: Res<GameSettings>, graphics_settings: Res<GraphicsSettings>) {
     // This function demonstrates that settings are reactive
     // When settings change, this will automatically be called
     // You can use this pattern to apply settings changes to your game
-    
+
     if game_settings.is_changed() && !game_settings.is_added() {
         info!("Game settings changed! New settings: {:?}", *game_settings);
     }
-    
+
     if graphics_settings.is_changed() && !graphics_settings.is_added() {
-        info!("Graphics settings changed! New settings: {:?}", *graphics_settings);
+        info!(
+            "Graphics settings changed! New settings: {:?}",
+            *graphics_settings
+        );
     }
 }

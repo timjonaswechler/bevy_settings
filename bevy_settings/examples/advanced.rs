@@ -1,5 +1,5 @@
 //! # Advanced Features Example
-//! 
+//!
 //! This example demonstrates:
 //! - Using nested structs in settings
 //! - Using enums in settings
@@ -75,7 +75,7 @@ fn main() {
     println!("=== Advanced Settings Example ===\n");
 
     let mut app = App::new();
-    
+
     app.add_plugins(MinimalPlugins)
         // Add multiple settings with different formats
         .add_plugins(
@@ -117,7 +117,7 @@ fn modify_settings(
     // Only modify once, after a short delay to ensure the app is fully initialized
     if !*modified && time.elapsed_seconds() > 0.1 {
         *modified = true;
-        
+
         // Modify video settings
         video.resolution = Resolution {
             width: 2560,

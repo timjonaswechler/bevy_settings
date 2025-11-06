@@ -40,7 +40,7 @@ fn modify_settings(mut settings: ResMut<AudioSettings>, time: Res<Time>) {
         settings.sfx_volume = 0.9;
         info!("Settings modified! They will be saved automatically.");
     }
-    
+
     // Exit after 3 seconds
     if time.elapsed_seconds() > 3.0 {
         std::process::exit(0);

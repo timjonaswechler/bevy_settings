@@ -30,19 +30,19 @@ impl SettingsStorage {
     }
 
     /// Load settings from disk, or return defaults if not found
-    /// 
+    ///
     /// If the settings file doesn't exist, returns the default values.
     /// If it exists, loads the entire settings object from the file.
     pub fn load<T: Settings>(&self, name: &str) -> Result<T> {
         let path = self.get_path(name);
-        
+
         // If file doesn't exist, return defaults
         if !path.exists() {
             return Ok(T::default());
         }
 
         let content = fs::read(&path)?;
-        
+
         // Deserialize based on format
         let settings = match self.format {
             SerializationFormat::Json => serde_json::from_slice(&content)?,
@@ -53,14 +53,14 @@ impl SettingsStorage {
     }
 
     /// Save settings to disk, storing only values that differ from defaults
-    /// 
+    ///
     /// This compares the current settings with defaults. If they are identical,
     /// the settings file is deleted (no need to store defaults). Otherwise,
     /// the entire settings object is saved.
     pub fn save<T: Settings>(&self, name: &str, settings: &T) -> Result<()> {
         let path = self.get_path(name);
         let defaults = T::default();
-        
+
         // If settings equal defaults, delete the file (no need to store defaults)
         if settings == &defaults {
             if path.exists() {
@@ -107,7 +107,7 @@ mod tests {
 
     // Manual implementation for testing without the derive macro
     impl bevy::prelude::Resource for TestSettings {}
-    
+
     impl Settings for TestSettings {
         fn type_name() -> &'static str {
             "TestSettings"
@@ -160,7 +160,7 @@ mod tests {
         // Saving default settings should not create a file
         let defaults = TestSettings::default();
         storage.save("defaults", &defaults).unwrap();
-        
+
         let path = storage.get_path("defaults");
         assert!(!path.exists());
 

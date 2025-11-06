@@ -3,12 +3,12 @@ use bevy::prelude::*;
 use std::marker::PhantomData;
 
 /// Plugin for managing settings in Bevy
-/// 
+///
 /// This plugin:
 /// - Loads settings from disk on startup
 /// - Saves settings to disk when they change
 /// - Manages settings as Bevy resources
-/// 
+///
 /// # Example
 /// ```no_run
 /// use bevy::prelude::*;
@@ -34,7 +34,7 @@ pub struct SettingsPlugin<T: Settings> {
 
 impl<T: Settings> SettingsPlugin<T> {
     /// Create a new settings plugin
-    /// 
+    ///
     /// # Arguments
     /// * `name` - Name for the settings file (without extension)
     /// * `format` - Serialization format (JSON or Binary)
@@ -56,13 +56,14 @@ impl<T: Settings> SettingsPlugin<T> {
 impl<T: Settings> Plugin for SettingsPlugin<T> {
     fn build(&self, app: &mut App) {
         // Load settings or use defaults
-        let settings = self
-            .storage
-            .load::<T>(&self.name)
-            .unwrap_or_else(|e| {
-                warn!("Failed to load settings for {}: {}. Using defaults.", T::type_name(), e);
-                T::default()
-            });
+        let settings = self.storage.load::<T>(&self.name).unwrap_or_else(|e| {
+            warn!(
+                "Failed to load settings for {}: {}. Using defaults.",
+                T::type_name(),
+                e
+            );
+            T::default()
+        });
 
         // Insert as resource
         app.insert_resource(settings);
@@ -86,10 +87,7 @@ struct SettingsManager<T: Settings> {
 }
 
 /// System that saves settings when they are modified
-fn save_settings_on_change<T: Settings>(
-    settings: Res<T>,
-    manager: Res<SettingsManager<T>>,
-) {
+fn save_settings_on_change<T: Settings>(settings: Res<T>, manager: Res<SettingsManager<T>>) {
     if settings.is_changed() && !settings.is_added() {
         if let Err(e) = manager.storage.save(&manager.name, &*settings) {
             error!("Failed to save settings for {}: {}", T::type_name(), e);

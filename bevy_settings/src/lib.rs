@@ -18,15 +18,13 @@
 //!     resolution: (u32, u32),
 //! }
 //!
-//! fn main() {
-//!     App::new()
-//!         .add_plugins(DefaultPlugins)
-//!         .add_plugins(SettingsPlugin::<GameSettings>::new(
-//!             "game_settings",
-//!             SerializationFormat::Json,
-//!         ))
-//!         .run();
-//! }
+//! App::new()
+//!     .add_plugins(DefaultPlugins)
+//!     .add_plugins(SettingsPlugin::<GameSettings>::new(
+//!         "game_settings",
+//!         SerializationFormat::Json,
+//!     ))
+//!     .run();
 //! ```
 
 pub use bevy_settings_derive::Settings;
@@ -45,6 +43,7 @@ pub use trait_def::Settings;
 
 /// Re-export commonly used types
 pub mod prelude {
-    pub use crate::{Settings, SettingsError, SettingsPlugin, SettingsStorage, SerializationFormat};
+    pub use crate::{
+        SerializationFormat, Settings, SettingsError, SettingsPlugin, SettingsStorage,
+    };
 }
-

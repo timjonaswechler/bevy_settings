@@ -3,7 +3,7 @@ use quote::quote;
 use syn::{parse_macro_input, DeriveInput};
 
 /// Derive macro for Settings trait
-/// 
+///
 /// This macro implements the Settings trait for a struct, enabling it to be:
 /// - Used as a Bevy resource
 /// - Serialized/deserialized to JSON or binary format
@@ -24,7 +24,7 @@ use syn::{parse_macro_input, DeriveInput};
 pub fn derive_settings(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
-    
+
     let expanded = quote! {
         impl bevy_settings::Settings for #name {
             fn type_name() -> &'static str {
@@ -32,6 +32,6 @@ pub fn derive_settings(input: TokenStream) -> TokenStream {
             }
         }
     };
-    
+
     TokenStream::from(expanded)
 }
