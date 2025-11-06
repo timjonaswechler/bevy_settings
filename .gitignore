@@ -23,3 +23,5 @@ target
 # Runtime settings directories
 settings/
 config/
+SaveGames/
+SaveGame/
