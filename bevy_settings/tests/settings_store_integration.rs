@@ -35,7 +35,9 @@ impl Default for TestSettingsB {
 }
 
 fn get_test_path(test_name: &str) -> PathBuf {
-    PathBuf::from("/tmp/bevy_settings_store_tests").join(test_name)
+    std::env::temp_dir()
+        .join("bevy_settings_store_tests")
+        .join(test_name)
 }
 
 fn cleanup_test(test_name: &str) {

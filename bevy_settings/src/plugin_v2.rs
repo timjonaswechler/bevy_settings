@@ -1,9 +1,7 @@
-use crate::{SerializationFormat, Settings, SettingsStorage};
+use crate::{common::{save_settings_on_change, SettingsManager}, SerializationFormat, Settings, SettingsStorage};
 use bevy::{
     app::{App, Plugin, PostUpdate},
-    ecs::{change_detection::DetectChanges, system::Resource},
-    log::{error, info, warn},
-    prelude::Res,
+    log::warn,
 };
 use std::any::TypeId;
 use std::collections::HashMap;
@@ -82,25 +80,6 @@ impl<T: Settings> SettingsHandler for TypedSettingsHandler<T> {
 
     fn register_save_system(&self, app: &mut App, _config: &SettingsConfig) {
         app.add_systems(PostUpdate, save_settings_on_change::<T>);
-    }
-}
-
-/// Resource that manages settings persistence
-#[derive(Resource, Clone)]
-struct SettingsManager<T: Settings> {
-    name: String,
-    storage: SettingsStorage,
-    _phantom: std::marker::PhantomData<T>,
-}
-
-/// System that saves settings when they are modified
-fn save_settings_on_change<T: Settings>(settings: Res<T>, manager: Res<SettingsManager<T>>) {
-    if settings.is_changed() && !settings.is_added() {
-        if let Err(e) = manager.storage.save(&manager.name, &*settings) {
-            error!("Failed to save settings for {}: {}", T::type_name(), e);
-        } else {
-            info!("Settings saved for {}", T::type_name());
-        }
     }
 }
 

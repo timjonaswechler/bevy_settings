@@ -88,6 +88,7 @@
 
 pub use bevy_settings_derive::Settings;
 
+mod common;
 mod error;
 mod format;
 mod plugin;
