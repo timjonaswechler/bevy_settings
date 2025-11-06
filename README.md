@@ -203,6 +203,9 @@ cargo run --example basic
 
 # Simple automated example
 cargo run --example simple
+
+# Advanced example with nested structs, enums, and multiple formats
+cargo run --example advanced
 ```
 
 ## How It Works
