@@ -39,12 +39,14 @@ mod error;
 mod format;
 mod plugin;
 mod plugin_v2;
+mod settings_store;
 mod storage;
 mod trait_def;
 
 pub use error::SettingsError;
 pub use format::SerializationFormat;
 pub use plugin_v2::{SettingsConfig, SettingsPlugin};
+pub use settings_store::SettingsStore;
 pub use storage::SettingsStorage;
 pub use trait_def::Settings;
 
@@ -55,6 +57,6 @@ pub use plugin::SettingsPlugin as TypedSettingsPlugin;
 pub mod prelude {
     pub use crate::{
         SerializationFormat, Settings, SettingsConfig, SettingsError, SettingsPlugin,
-        SettingsStorage, TypedSettingsPlugin,
+        SettingsStorage, SettingsStore, TypedSettingsPlugin,
     };
 }
