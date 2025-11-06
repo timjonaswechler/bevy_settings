@@ -134,8 +134,9 @@ impl SettingsStore {
     /// Get the base path, using "settings" as default if not set
     fn get_base_path(&self) -> String {
         self.base_path
-            .clone()
-            .unwrap_or_else(|| "settings".to_string())
+            .as_deref()
+            .unwrap_or("settings")
+            .to_string()
     }
 
     /// Get the name of this settings store
