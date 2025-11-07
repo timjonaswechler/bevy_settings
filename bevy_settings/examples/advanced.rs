@@ -77,10 +77,10 @@ fn main() {
     let mut app = App::new();
 
     app.add_plugins(MinimalPlugins)
-        // Add multiple settings with unified storage
+        // Add multiple settings with storage
         .add_plugins(
             SettingsPlugin::new("GameSettings")
-                .format(SerializationFormat::Json)
+                .format(SerializationFormat::Binary)
                 .version("0.1.0")
                 .with_base_path("config")
                 .register::<VideoSettings>()
@@ -139,7 +139,7 @@ fn modify_settings(
 
         println!("Settings will be saved automatically!");
         println!("Check the 'config/' directory for:");
-        println!("  - GameSettings.json (unified settings file with all settings)\n");
+        println!("  - GameSettings.json (settings file with all settings)\n");
     }
 }
 

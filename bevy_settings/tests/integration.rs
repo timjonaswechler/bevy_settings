@@ -75,7 +75,7 @@ fn test_plugin_saves_on_change() {
     // Run another update to trigger the save system
     app.update();
 
-    // Check if file was created (unified file with plugin name)
+    // Check if file was created (file with plugin name)
     let settings_file = get_test_path(test_name).join("TestSettings.json");
     assert!(settings_file.exists());
 
@@ -202,7 +202,7 @@ fn test_binary_format() {
 
     app.update();
 
-    // Check if .bin file was created (unified file with plugin name)
+    // Check if .bin file was created (file with plugin name)
     let settings_file = get_test_path(test_name).join("TestSettings.bin");
     assert!(settings_file.exists());
 

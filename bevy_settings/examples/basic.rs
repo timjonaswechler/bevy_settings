@@ -38,7 +38,7 @@ enum GraphicsQuality {
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        // Add settings plugin - registers multiple settings types in one unified file
+        // Add settings plugin - registers multiple settings types in one file
         .add_plugins(
             SettingsPlugin::new("GameSettings")
                 .format(SerializationFormat::Json)
