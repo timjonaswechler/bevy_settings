@@ -50,7 +50,7 @@ impl SettingsStorage {
             SerializationFormat::Json => serde_json::from_slice(&content)?,
             SerializationFormat::Binary => {
                 bincode::serde::decode_from_slice(&content, config)
-                    .map_err(|e| crate::error::SettingsError::BincodeDecode(e))?
+                    .map_err(crate::error::SettingsError::BincodeDecode)?
                     .0
             }
         };
@@ -87,7 +87,7 @@ impl SettingsStorage {
             SerializationFormat::Binary => {
                 let mut buffer = vec![0u8; 1024 * 1024]; // 1MB buffer
                 let size = bincode::serde::encode_into_slice(settings, &mut buffer, config)
-                    .map_err(|e| crate::error::SettingsError::BincodeEncode(e))?;
+                    .map_err(crate::error::SettingsError::BincodeEncode)?;
                 buffer.truncate(size);
                 buffer
             }
