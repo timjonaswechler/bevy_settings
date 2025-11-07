@@ -4,7 +4,9 @@ use std::sync::{Arc, Mutex};
 use serde_json::Value;
 use std::collections::HashMap;
 
-/// Resource that manages settings persistence for a specific settings type
+/// Resource that manages settings persistence for a specific settings type (legacy)
+/// This is kept for backwards compatibility with old storage system
+#[allow(dead_code)]
 #[derive(Resource, Clone)]
 pub(crate) struct SettingsManager<T: Settings> {
     pub name: String,
@@ -12,7 +14,9 @@ pub(crate) struct SettingsManager<T: Settings> {
     pub _phantom: std::marker::PhantomData<T>,
 }
 
-/// System that saves settings when they are modified
+/// System that saves settings when they are modified (legacy)
+/// This is kept for backwards compatibility with old storage system
+#[allow(dead_code)]
 pub(crate) fn save_settings_on_change<T: Settings>(
     settings: Res<T>,
     manager: Res<SettingsManager<T>>,
@@ -35,7 +39,8 @@ pub(crate) struct UnifiedSettingsManager {
     pub settings_map: Arc<Mutex<HashMap<String, Value>>>,
 }
 
-/// Metadata for a registered settings type in unified storage
+/// Metadata for a registered settings type in unified storage (for future use)
+#[allow(dead_code)]
 pub(crate) struct UnifiedSettingsRegistration {
     pub type_key: String,
     pub save_fn: Box<dyn Fn(&World, &mut HashMap<String, Value>) + Send + Sync>,

@@ -74,7 +74,8 @@ impl UnifiedStorage {
         }
     }
 
-    /// Load a specific settings type from the unified file
+    /// Load a specific settings type from the unified file (available for manual usage)
+    #[allow(dead_code)]
     pub fn load<T: Settings>(&self, type_key: &str) -> Result<T> {
         let all_settings = self.load_all()?;
         
@@ -137,7 +138,8 @@ impl UnifiedStorage {
         Ok(())
     }
 
-    /// Delete the unified settings file
+    /// Delete the unified settings file (available for manual usage)
+    #[allow(dead_code)]
     pub fn delete(&self) -> Result<()> {
         let path = self.get_path();
         if path.exists() {
