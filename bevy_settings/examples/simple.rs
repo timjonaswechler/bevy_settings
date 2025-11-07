@@ -19,10 +19,10 @@ fn main() {
         // Add the settings plugin - it will automatically load settings on startup
         // and save them when they change
         .add_plugins(
-            SettingsPlugin::new().register::<AudioSettings>(SettingsConfig::new(
-                "audio_settings",
-                SerializationFormat::Json,
-            )),
+            SettingsPlugin::new("AudioSettings")
+                .format(SerializationFormat::Json)
+                .with_base_path("config")
+                .register::<AudioSettings>(),
         )
         .add_systems(Startup, print_settings)
         .add_systems(Update, modify_settings)
@@ -31,7 +31,7 @@ fn main() {
 
 fn print_settings(settings: Res<AudioSettings>) {
     info!("Current audio settings: {:?}", *settings);
-    info!("Settings file will be saved to: settings/audio_settings.json");
+    info!("Settings file will be saved to: config/AudioSettings.json");
 }
 
 fn modify_settings(mut settings: ResMut<AudioSettings>, time: Res<Time>) {

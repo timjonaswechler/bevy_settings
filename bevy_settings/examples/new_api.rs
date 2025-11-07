@@ -55,18 +55,13 @@ fn main() {
         .add_plugins(MinimalPlugins)
         // NEW API: Register all settings types with a single plugin!
         .add_plugins(
-            SettingsPlugin::new()
-                .register::<GameSettings>(
-                    SettingsConfig::new("game", SerializationFormat::Json).with_base_path("config"),
-                )
-                .register::<GraphicsSettings>(
-                    SettingsConfig::new("graphics", SerializationFormat::Json)
-                        .with_base_path("config"),
-                )
-                .register::<AudioSettings>(
-                    SettingsConfig::new("audio", SerializationFormat::Binary)
-                        .with_base_path("config"),
-                ),
+            SettingsPlugin::new("GameSettings")
+                .format(SerializationFormat::Json)
+                .version("0.1.0")
+                .with_base_path("config")
+                .register::<GameSettings>()
+                .register::<GraphicsSettings>()
+                .register::<AudioSettings>(),
         )
         .add_systems(Startup, print_initial_settings)
         .add_systems(Update, (modify_settings, check_and_exit).chain())

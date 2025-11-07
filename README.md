@@ -47,24 +47,39 @@ struct GraphicsSettings {
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        // Register all settings with a single plugin
+        // Register all settings with a single plugin - creates one unified file
         .add_plugins(
-            SettingsPlugin::new()
-                .register::<GameSettings>(
-                    SettingsConfig::new("game_settings", SerializationFormat::Json)
-                )
-                .register::<GraphicsSettings>(
-                    SettingsConfig::new("graphics_settings", SerializationFormat::Json)
-                )
+            SettingsPlugin::new("GameSettings")
+                .format(SerializationFormat::Json)
+                .version("0.1.0")
+                .with_base_path("config")
+                .register::<GameSettings>()
+                .register::<GraphicsSettings>()
         )
         .run();
 }
 ```
 
 That's it! Your settings will be:
-- Loaded from `settings/*.json` on startup (or defaults if files don't exist)
+- Stored in a single unified file `config/GameSettings.json`
+- Loaded on startup (or defaults if file doesn't exist)
 - Automatically saved when modified
 - Only stored if they differ from defaults
+
+The file will look like:
+```json
+{
+  "version": "0.1.0",
+  "gamesettings": {
+    "volume": 0.8,
+    "resolution": [1920, 1080],
+    "fullscreen": true
+  },
+  "graphicssettings": {
+    "quality": 2
+  }
+}
+```
 
 ## Usage
 
@@ -90,14 +105,15 @@ Required trait implementations:
 ### Adding to Your App
 
 ```rust
-use bevy_settings::{SettingsPlugin, SettingsConfig, SerializationFormat};
+use bevy_settings::{SettingsPlugin, SerializationFormat};
 
 App::new()
     .add_plugins(
-        SettingsPlugin::new()
-            .register::<MySettings>(
-                SettingsConfig::new("my_settings", SerializationFormat::Json)
-            )
+        SettingsPlugin::new("GameSettings")
+            .format(SerializationFormat::Json)
+            .version("0.1.0")
+            .with_base_path("config")
+            .register::<MySettings>()
     )
     .run();
 ```
@@ -105,11 +121,10 @@ App::new()
 ### Custom Settings Path
 
 ```rust
-SettingsPlugin::new()
-    .register::<MySettings>(
-        SettingsConfig::new("my_settings", SerializationFormat::Json)
-            .with_base_path("custom/path")
-    )
+SettingsPlugin::new("GameSettings")
+    .format(SerializationFormat::Json)
+    .with_base_path("custom/path")
+    .register::<MySettings>()
 ```
 
 ### Reading Settings
@@ -142,9 +157,9 @@ The system only saves values that differ from defaults:
 let defaults = MySettings::default();
 // File is deleted if it exists
 
-// If settings differ from defaults, only those settings are saved
+// If settings differ from defaults, only those fields are saved
 let modified = MySettings { volume: 0.5, ..default() };
-// File is created with the modified values
+// Only the "volume" field will be saved to the file
 ```
 
 ## Serialization Formats
@@ -155,12 +170,15 @@ let modified = MySettings { volume: 0.5, ..default() };
 SerializationFormat::Json
 ```
 
-Creates human-readable `.json` files:
+Creates human-readable `.json` files with all registered settings in a unified structure:
 ```json
 {
-  "volume": 0.8,
-  "resolution": [1920, 1080],
-  "fullscreen": true
+  "version": "0.1.0",
+  "mysettings": {
+    "volume": 0.8,
+    "resolution": [1920, 1080],
+    "fullscreen": true
+  }
 }
 ```
 
@@ -176,7 +194,7 @@ Creates compact `.bin` files using [bincode](https://github.com/bincode-org/binc
 
 ### Multiple Settings
 
-You can register multiple settings types with a single plugin:
+You can register multiple settings types with a single plugin, and they'll all be saved to one unified file:
 
 ```rust
 #[derive(Settings, Resource, Serialize, Deserialize, Default, Clone, PartialEq)]
@@ -187,15 +205,23 @@ struct GraphicsSettings { /* ... */ }
 
 App::new()
     .add_plugins(
-        SettingsPlugin::new()
-            .register::<GameSettings>(
-                SettingsConfig::new("game", SerializationFormat::Json)
-            )
-            .register::<GraphicsSettings>(
-                SettingsConfig::new("graphics", SerializationFormat::Json)
-            )
+        SettingsPlugin::new("GameSettings")
+            .format(SerializationFormat::Json)
+            .version("0.1.0")
+            .with_base_path("config")
+            .register::<GameSettings>()
+            .register::<GraphicsSettings>()
     )
     .run();
+```
+
+This creates a single file `config/GameSettings.json`:
+```json
+{
+  "version": "0.1.0",
+  "gamesettings": { /* ... */ },
+  "graphicssettings": { /* ... */ }
+}
 ```
 
 ### Reacting to Changes
@@ -231,11 +257,11 @@ cargo run --example new_api
 
 ## How It Works
 
-1. **Startup**: The plugin loads settings from disk, or uses defaults if the file doesn't exist
+1. **Startup**: The plugin loads settings from a unified file on disk, or uses defaults if the file doesn't exist
 2. **Runtime**: Settings are available as Bevy resources
 3. **Modification**: When settings are modified (via `ResMut`), Bevy's change detection triggers
-4. **Persistence**: The plugin automatically saves settings to disk
-5. **Delta Persistence**: If settings equal defaults, the file is deleted
+4. **Persistence**: The plugin automatically saves all settings to a single unified file
+5. **Delta Persistence**: Only fields that differ from defaults are saved; if all settings equal defaults, the file is deleted
 
 ## API Documentation
 
