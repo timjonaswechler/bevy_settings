@@ -35,10 +35,10 @@ fn test_plugin_loads_defaults() {
 
     let mut app = App::new();
     app.add_plugins(MinimalPlugins).add_plugins(
-        SettingsPlugin::new().register::<TestSettings>(
-            SettingsConfig::new("test_settings", SerializationFormat::Json)
-                .with_base_path(get_test_path(test_name).to_str().unwrap()),
-        ),
+        SettingsPlugin::new("TestSettings")
+            .format(SerializationFormat::Json)
+            .with_base_path(get_test_path(test_name).to_str().unwrap())
+            .register::<TestSettings>(),
     );
 
     app.update();
@@ -57,10 +57,10 @@ fn test_plugin_saves_on_change() {
 
     let mut app = App::new();
     app.add_plugins(MinimalPlugins).add_plugins(
-        SettingsPlugin::new().register::<TestSettings>(
-            SettingsConfig::new("test_settings", SerializationFormat::Json)
-                .with_base_path(get_test_path(test_name).to_str().unwrap()),
-        ),
+        SettingsPlugin::new("TestSettings")
+            .format(SerializationFormat::Json)
+            .with_base_path(get_test_path(test_name).to_str().unwrap())
+            .register::<TestSettings>(),
     );
 
     app.update();
@@ -75,8 +75,8 @@ fn test_plugin_saves_on_change() {
     // Run another update to trigger the save system
     app.update();
 
-    // Check if file was created
-    let settings_file = get_test_path(test_name).join("test_settings.json");
+    // Check if file was created (unified file with plugin name)
+    let settings_file = get_test_path(test_name).join("TestSettings.json");
     assert!(settings_file.exists());
 
     // Verify file contents
@@ -96,10 +96,10 @@ fn test_plugin_loads_saved_settings() {
     {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins).add_plugins(
-            SettingsPlugin::new().register::<TestSettings>(
-                SettingsConfig::new("test_settings", SerializationFormat::Json)
-                    .with_base_path(get_test_path(test_name).to_str().unwrap()),
-            ),
+            SettingsPlugin::new("TestSettings")
+                .format(SerializationFormat::Json)
+                .with_base_path(get_test_path(test_name).to_str().unwrap())
+                .register::<TestSettings>(),
         );
 
         app.update();
@@ -117,10 +117,10 @@ fn test_plugin_loads_saved_settings() {
     {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins).add_plugins(
-            SettingsPlugin::new().register::<TestSettings>(
-                SettingsConfig::new("test_settings", SerializationFormat::Json)
-                    .with_base_path(get_test_path(test_name).to_str().unwrap()),
-            ),
+            SettingsPlugin::new("TestSettings")
+                .format(SerializationFormat::Json)
+                .with_base_path(get_test_path(test_name).to_str().unwrap())
+                .register::<TestSettings>(),
         );
 
         app.update();
@@ -140,15 +140,15 @@ fn test_delta_persistence() {
 
     let mut app = App::new();
     app.add_plugins(MinimalPlugins).add_plugins(
-        SettingsPlugin::new().register::<TestSettings>(
-            SettingsConfig::new("test_settings", SerializationFormat::Json)
-                .with_base_path(get_test_path(test_name).to_str().unwrap()),
-        ),
+        SettingsPlugin::new("TestSettings")
+            .format(SerializationFormat::Json)
+            .with_base_path(get_test_path(test_name).to_str().unwrap())
+            .register::<TestSettings>(),
     );
 
     app.update();
 
-    let settings_file = get_test_path(test_name).join("test_settings.json");
+    let settings_file = get_test_path(test_name).join("TestSettings.json");
 
     // Default settings should not create a file
     assert!(!settings_file.exists());
@@ -185,10 +185,10 @@ fn test_binary_format() {
 
     let mut app = App::new();
     app.add_plugins(MinimalPlugins).add_plugins(
-        SettingsPlugin::new().register::<TestSettings>(
-            SettingsConfig::new("test_settings", SerializationFormat::Binary)
-                .with_base_path(get_test_path(test_name).to_str().unwrap()),
-        ),
+        SettingsPlugin::new("TestSettings")
+            .format(SerializationFormat::Binary)
+            .with_base_path(get_test_path(test_name).to_str().unwrap())
+            .register::<TestSettings>(),
     );
 
     app.update();
@@ -202,8 +202,8 @@ fn test_binary_format() {
 
     app.update();
 
-    // Check if .bin file was created
-    let settings_file = get_test_path(test_name).join("test_settings.bin");
+    // Check if .bin file was created (unified file with plugin name)
+    let settings_file = get_test_path(test_name).join("TestSettings.bin");
     assert!(settings_file.exists());
 
     cleanup_test(test_name);

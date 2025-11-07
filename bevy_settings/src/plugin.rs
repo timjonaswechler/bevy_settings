@@ -15,6 +15,16 @@ use std::collections::HashMap;
 ///
 /// Usage:
 /// ```no_run
+/// # use bevy::prelude::*;
+/// # use bevy_settings::{Settings, SettingsPlugin, SerializationFormat};
+/// # use serde::{Deserialize, Serialize};
+/// # 
+/// # #[derive(Settings, Resource, Serialize, Deserialize, Default, Clone, PartialEq)]
+/// # struct GameSettings { volume: f32 }
+/// # 
+/// # #[derive(Settings, Resource, Serialize, Deserialize, Default, Clone, PartialEq)]
+/// # struct AudioSettings { master: f32 }
+/// # 
 /// App::new()
 ///     .add_plugins(
 ///         SettingsPlugin::new("GameSettings")

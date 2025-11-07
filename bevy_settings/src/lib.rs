@@ -62,7 +62,7 @@
 //! ## Alternative API with SettingsPlugin
 //! ```no_run
 //! use bevy::prelude::*;
-//! use bevy_settings::{Settings, SettingsPlugin, SettingsConfig, SerializationFormat};
+//! use bevy_settings::{Settings, SettingsPlugin, SerializationFormat};
 //! use serde::{Deserialize, Serialize};
 //!
 //! #[derive(Settings, Resource, Serialize, Deserialize, Default, Clone, PartialEq)]
@@ -79,9 +79,11 @@
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
 //!     .add_plugins(
-//!         SettingsPlugin::new()
-//!             .register::<GameSettings>(SettingsConfig::new("game", SerializationFormat::Json))
-//!             .register::<AudioSettings>(SettingsConfig::new("audio", SerializationFormat::Json))
+//!         SettingsPlugin::new("GameSettings")
+//!             .format(SerializationFormat::Json)
+//!             .version("0.1.0")
+//!             .register::<GameSettings>()
+//!             .register::<AudioSettings>()
 //!     )
 //!     .run();
 //! ```
