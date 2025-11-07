@@ -1,65 +1,131 @@
-use crate::{SerializationFormat, Settings, SettingsStorage};
-use bevy::prelude::*;
+use crate::{
+    SerializationFormat, Settings, SettingsStorage,
+    common::{SettingsManager, save_settings_on_change},
+};
+use bevy::{
+    app::{App, Plugin, PostUpdate},
+    log::warn,
+};
 use std::marker::PhantomData;
 
-/// Legacy plugin for managing a single settings type in Bevy (deprecated)
+/// Plugin for managing all settings in Bevy using a fluent builder API.
 ///
-/// **Note:** This is the legacy API. For new code, use the new `SettingsPlugin`
-/// which allows registering multiple settings types with a single plugin.
-///
-/// This plugin:
-/// - Loads settings from disk on startup
-/// - Saves settings to disk when they change
-/// - Manages settings as Bevy resources
-///
-/// # Example
+/// Usage:
 /// ```no_run
-/// use bevy::prelude::*;
-/// use bevy_settings::{Settings, TypedSettingsPlugin, SerializationFormat};
-/// use serde::{Deserialize, Serialize};
-///
-/// #[derive(Settings, Resource, Serialize, Deserialize, Default, Clone, PartialEq)]
-/// struct GameSettings {
-///     volume: f32,
-/// }
-///
 /// App::new()
-///     .add_plugins(TypedSettingsPlugin::<GameSettings>::new(
-///         "game_settings",
-///         SerializationFormat::Json,
-///     ));
+///     .add_plugins(
+///         SettingsPlugin::new("GameSettings")
+///             .format(SerializationFormat::Json)
+///             .with_base_path("settings")
+///             .register::<GameSettings>()
+///             .register::<AudioSettings>()
+///     );
 /// ```
-pub struct SettingsPlugin<T: Settings> {
+pub struct SettingsPlugin {
     name: String,
-    storage: SettingsStorage,
-    _phantom: PhantomData<T>,
+    format: SerializationFormat,
+    version: Option<String>,
+    base_path: Option<String>,
+    handlers: Vec<Box<dyn SettingsHandler>>,
 }
 
-impl<T: Settings> SettingsPlugin<T> {
-    /// Create a new settings plugin
-    ///
-    /// # Arguments
-    /// * `name` - Name for the settings file (without extension)
-    /// * `format` - Serialization format (JSON or Binary)
-    pub fn new(name: impl Into<String>, format: SerializationFormat) -> Self {
+impl SettingsPlugin {
+    /// Create a new settings plugin bound to a store name.
+    pub fn new(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
-            storage: SettingsStorage::new(format),
-            _phantom: PhantomData,
+            format: SerializationFormat::Json,
+            version: None,
+            base_path: None,
+            handlers: Vec::new(),
         }
     }
 
-    /// Set a custom base path for settings storage
+    /// Set serialization format for all registered settings
+    pub fn format(mut self, format: SerializationFormat) -> Self {
+        self.format = format;
+        self
+    }
+
+    /// Set a version string (for future migrations / metadata)
+    pub fn version(mut self, version: impl Into<String>) -> Self {
+        self.version = Some(version.into());
+        self
+    }
+
+    /// Set base path for settings files
     pub fn with_base_path(mut self, path: impl Into<String>) -> Self {
-        self.storage = self.storage.with_base_path(path.into());
+        self.base_path = Some(path.into());
+        self
+    }
+
+    /// Register a settings type `T`. File name will be derived from store name + type as implemented.
+    pub fn register<T: Settings + 'static>(mut self) -> Self {
+        let handler = Box::new(TypedSettingsHandler::<T>::new());
+        self.handlers.push(handler);
         self
     }
 }
 
-impl<T: Settings> Plugin for SettingsPlugin<T> {
-    fn build(&self, app: &mut App) {
+impl Default for SettingsPlugin {
+    fn default() -> Self {
+        Self::new("GameSettings")
+    }
+}
+
+/// Internal trait for type-erased settings operations
+trait SettingsHandler: Send + Sync {
+    fn load_and_insert(
+        &self,
+        app: &mut App,
+        store_name: &str,
+        format: SerializationFormat,
+        base_path: &str,
+    );
+    fn register_save_system(&self, app: &mut App);
+}
+
+/// Concrete implementation of SettingsHandler for a specific type
+struct TypedSettingsHandler<T: Settings> {
+    _phantom: PhantomData<T>,
+}
+
+impl<T: Settings> TypedSettingsHandler<T> {
+    fn new() -> Self {
+        Self {
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Generate settings file name based on store name (supports placeholder `[slot]` style)
+    fn get_settings_name(store_name: &str) -> String {
+        if store_name.starts_with('[') && store_name.ends_with(']') {
+            format!(
+                "{}_{}",
+                &store_name[1..store_name.len() - 1],
+                T::type_name()
+            )
+        } else {
+            T::type_name().to_string()
+        }
+    }
+}
+
+impl<T: Settings> SettingsHandler for TypedSettingsHandler<T> {
+    fn load_and_insert(
+        &self,
+        app: &mut App,
+        store_name: &str,
+        format: SerializationFormat,
+        base_path: &str,
+    ) {
+        let mut storage = SettingsStorage::new(format);
+        storage = storage.with_base_path(base_path);
+
+        let settings_name = Self::get_settings_name(store_name);
+
         // Load settings or use defaults
-        let settings = self.storage.load::<T>(&self.name).unwrap_or_else(|e| {
+        let settings = storage.load::<T>(&settings_name).unwrap_or_else(|e| {
             warn!(
                 "Failed to load settings for {}: {}. Using defaults.",
                 T::type_name(),
@@ -68,43 +134,32 @@ impl<T: Settings> Plugin for SettingsPlugin<T> {
             T::default()
         });
 
-        // Insert as resource
+        // Insert as resource and manager
         app.insert_resource(settings);
         app.insert_resource(SettingsManager::<T> {
-            name: self.name.clone(),
-            storage: self.storage.clone(),
+            name: settings_name,
+            storage,
             _phantom: PhantomData,
         });
+    }
 
-        // Add system to save settings when they change
+    fn register_save_system(&self, app: &mut App) {
         app.add_systems(PostUpdate, save_settings_on_change::<T>);
     }
 }
 
-/// Resource that manages settings persistence
-#[derive(Resource, Clone)]
-struct SettingsManager<T: Settings> {
-    name: String,
-    storage: SettingsStorage,
-    _phantom: PhantomData<T>,
-}
+impl Plugin for SettingsPlugin {
+    fn build(&self, app: &mut App) {
+        let base_path = self.base_path.as_deref().unwrap_or("settings");
 
-/// System that saves settings when they are modified
-fn save_settings_on_change<T: Settings>(settings: Res<T>, manager: Res<SettingsManager<T>>) {
-    if settings.is_changed() && !settings.is_added() {
-        if let Err(e) = manager.storage.save(&manager.name, &*settings) {
-            error!("Failed to save settings for {}: {}", T::type_name(), e);
-        } else {
-            info!("Settings saved for {}", T::type_name());
+        // Load and insert all registered settings
+        for handler in &self.handlers {
+            handler.load_and_insert(app, &self.name, self.format, base_path);
         }
-    }
-}
 
-impl Clone for SettingsStorage {
-    fn clone(&self) -> Self {
-        Self {
-            format: self.format,
-            base_path: self.base_path.clone(),
+        // Register save systems for all settings
+        for handler in &self.handlers {
+            handler.register_save_system(app);
         }
     }
 }

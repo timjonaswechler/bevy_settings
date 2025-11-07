@@ -7,9 +7,13 @@ pub enum SettingsError {
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
 
-    /// Error during binary serialization/deserialization
+    /// Error during binary serialization
     #[error("Binary serialization error: {0}")]
-    Bincode(#[from] bincode::Error),
+    BincodeEncode(#[from] bincode::error::EncodeError),
+
+    /// Error during binary deserialization
+    #[error("Binary deserialization error: {0}")]
+    BincodeDecode(#[from] bincode::error::DecodeError),
 
     /// Error during file I/O operations
     #[error("IO error: {0}")]

@@ -1,8 +1,9 @@
-use crate::{error::Result, SerializationFormat, Settings};
+use crate::{SerializationFormat, Settings, error::Result};
 use std::fs;
 use std::path::{Path, PathBuf};
 
 /// Handles storage and retrieval of settings
+#[derive(Clone)]
 pub struct SettingsStorage {
     pub(crate) format: SerializationFormat,
     pub(crate) base_path: PathBuf,
@@ -42,11 +43,16 @@ impl SettingsStorage {
         }
 
         let content = fs::read(&path)?;
+        let config = bincode::config::standard();
 
         // Deserialize based on format
         let settings = match self.format {
             SerializationFormat::Json => serde_json::from_slice(&content)?,
-            SerializationFormat::Binary => bincode::deserialize(&content)?,
+            SerializationFormat::Binary => {
+                bincode::serde::decode_from_slice(&content, config)
+                    .map_err(|e| crate::error::SettingsError::BincodeDecode(e))?
+                    .0
+            }
         };
 
         Ok(settings)
@@ -73,11 +79,18 @@ impl SettingsStorage {
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }
+        let config = bincode::config::standard();
 
         // Serialize based on format
         let content = match self.format {
             SerializationFormat::Json => serde_json::to_vec_pretty(settings)?,
-            SerializationFormat::Binary => bincode::serialize(settings)?,
+            SerializationFormat::Binary => {
+                let mut buffer = vec![0u8; 1024 * 1024]; // 1MB buffer
+                let size = bincode::serde::encode_into_slice(settings, &mut buffer, config)
+                    .map_err(|e| crate::error::SettingsError::BincodeEncode(e))?;
+                buffer.truncate(size);
+                buffer
+            }
         };
 
         fs::write(&path, content)?;
