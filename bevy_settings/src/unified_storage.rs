@@ -4,6 +4,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 
+/// Buffer size for binary serialization (1 MB)
+const BINARY_BUFFER_SIZE: usize = 1024 * 1024;
+
 /// Unified storage that saves multiple settings types to a single file
 #[derive(Clone)]
 pub struct UnifiedStorage {
@@ -74,7 +77,16 @@ impl UnifiedStorage {
         }
     }
 
-    /// Load a specific settings type from the unified file (available for manual usage)
+    /// Load a specific settings type from the unified file
+    /// 
+    /// This method is provided for manual control over loading. When using the plugin system,
+    /// settings are loaded automatically.
+    /// 
+    /// # Arguments
+    /// * `type_key` - The lowercase type name (e.g., "audiosettings" for AudioSettings)
+    /// 
+    /// # Returns
+    /// Returns the merged settings (defaults + saved delta) or defaults if not found
     #[allow(dead_code)]
     pub fn load<T: Settings>(&self, type_key: &str) -> Result<T> {
         let all_settings = self.load_all()?;
@@ -126,7 +138,7 @@ impl UnifiedStorage {
             SerializationFormat::Json => serde_json::to_vec_pretty(&root_value)?,
             SerializationFormat::Binary => {
                 let config = bincode::config::standard();
-                let mut buffer = vec![0u8; 1024 * 1024]; // 1MB buffer
+                let mut buffer = vec![0u8; BINARY_BUFFER_SIZE];
                 let size = bincode::serde::encode_into_slice(&root_value, &mut buffer, config)
                     .map_err(|e| crate::error::SettingsError::BincodeEncode(e))?;
                 buffer.truncate(size);
@@ -138,7 +150,10 @@ impl UnifiedStorage {
         Ok(())
     }
 
-    /// Delete the unified settings file (available for manual usage)
+    /// Delete the unified settings file
+    /// 
+    /// This method is provided for manual control. When using the plugin system,
+    /// files are automatically deleted when all settings return to their defaults.
     #[allow(dead_code)]
     pub fn delete(&self) -> Result<()> {
         let path = self.get_path();
