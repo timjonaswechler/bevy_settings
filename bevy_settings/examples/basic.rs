@@ -42,6 +42,7 @@ fn main() {
         .add_plugins(
             SettingsPlugin::new("GameSettings")
                 .format(SerializationFormat::Json)
+                .with_base_path("config")
                 .register::<GameSettings>()
                 .register::<GraphicsSettings>(),
         )

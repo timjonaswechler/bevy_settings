@@ -21,6 +21,7 @@ fn main() {
         .add_plugins(
             SettingsPlugin::new("AudioSettings")
                 .format(SerializationFormat::Json)
+                .with_base_path("config")
                 .register::<AudioSettings>(),
         )
         .add_systems(Startup, print_settings)
@@ -30,7 +31,7 @@ fn main() {
 
 fn print_settings(settings: Res<AudioSettings>) {
     info!("Current audio settings: {:?}", *settings);
-    info!("Settings file will be saved to: settings/AudioSettings.json");
+    info!("Settings file will be saved to: config/AudioSettings.json");
 }
 
 fn modify_settings(mut settings: ResMut<AudioSettings>, time: Res<Time>) {
