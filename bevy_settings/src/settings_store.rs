@@ -1,13 +1,19 @@
 use crate::{
-    SerializationFormat, Settings, SettingsStorage,
-    common::{SettingsManager, save_settings_on_change},
+    SerializationFormat, Settings,
+    common::{UnifiedSettingsManager, save_unified_settings_on_change, get_type_key},
+    unified_storage::{UnifiedStorage, merge_with_defaults},
 };
 use bevy::prelude::*;
+use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
 
-/// A fluent API for managing settings in Bevy
+/// A fluent API for managing settings in Bevy with unified storage
 ///
 /// `SettingsStore` provides a builder-style API for configuring and registering
-/// multiple settings types with shared configuration. It can be used in two ways:
+/// multiple settings types with shared configuration. All settings are stored in
+/// a single file with optional versioning.
+///
+/// It can be used in two ways:
 ///
 /// 1. As a Plugin (recommended): Automatically loads settings on startup and saves on changes
 /// 2. As a Resource: For manual control over loading and saving
@@ -28,6 +34,7 @@ use bevy::prelude::*;
 ///     .add_plugins(
 ///         SettingsStore::new("GameSettings")
 ///             .format(SerializationFormat::Json)
+///             .version("0.1.0")
 ///             .with_base_path("settings")
 ///             .register::<Input>()
 ///     )
@@ -57,11 +64,11 @@ use bevy::prelude::*;
 /// ```
 #[derive(Resource)]
 pub struct SettingsStore {
-    /// Name or identifier for this settings store
+    /// Name or identifier for this settings store (used as filename)
     name: String,
     /// Serialization format for all settings in this store
     format: SerializationFormat,
-    /// Version string (currently for documentation, future versioning support)
+    /// Version string (included in the settings file)
     version: Option<String>,
     /// Base path for settings files
     base_path: Option<String>,
@@ -72,11 +79,10 @@ pub struct SettingsStore {
 impl SettingsStore {
     /// Create a new settings store with the given name
     ///
-    /// The name can be a simple identifier like "GameSettings" or a placeholder
-    /// like "[gameplay]" for dynamic paths (e.g., save game slots).
+    /// The name will be used as the filename for the unified settings file.
     ///
     /// # Arguments
-    /// * `name` - Name or identifier for this settings store
+    /// * `name` - Name for this settings store (e.g., "GameSettings" will create "GameSettings.json")
     pub fn new(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
@@ -98,8 +104,7 @@ impl SettingsStore {
 
     /// Set the version for this settings store
     ///
-    /// This is currently used for documentation and can be used in the future
-    /// for settings migration between versions.
+    /// The version will be included in the settings file for future migration support.
     ///
     /// # Arguments
     /// * `version` - Version string (e.g., "0.1.0")
@@ -119,8 +124,8 @@ impl SettingsStore {
 
     /// Register a settings type with this store
     ///
-    /// All settings registered with this store will use the same format and base path
-    /// configured for the store. The settings file name will be derived from the type name.
+    /// All settings registered with this store will be saved in the unified file
+    /// with their type name (lowercase) as the key.
     ///
     /// # Type Parameters
     /// * `T` - The settings type to register (must implement `Settings`)
@@ -160,10 +165,23 @@ impl Plugin for SettingsStore {
     fn build(&self, app: &mut App) {
         let base_path = self.get_base_path();
 
+        // Create unified storage
+        let mut storage = UnifiedStorage::new(&self.name, self.format);
+        storage = storage.with_base_path(&base_path);
+        if let Some(ref version) = self.version {
+            storage = storage.with_version(version);
+        }
+
         // Load and insert all registered settings
         for handler in &self.handlers {
-            handler.load_and_insert(app, &self.name, self.format, &base_path);
+            handler.load_and_insert(app, &storage);
         }
+
+        // Insert the unified settings manager
+        app.insert_resource(UnifiedSettingsManager {
+            storage,
+            settings_map: Arc::new(Mutex::new(HashMap::new())),
+        });
 
         // Register save systems for all settings
         for handler in &self.handlers {
@@ -177,9 +195,7 @@ trait SettingsHandler: Send + Sync {
     fn load_and_insert(
         &self,
         app: &mut App,
-        store_name: &str,
-        format: SerializationFormat,
-        base_path: &str,
+        storage: &UnifiedStorage,
     );
     fn register_save_system(&self, app: &mut App);
 }
@@ -195,40 +211,27 @@ impl<T: Settings> TypedSettingsHandler<T> {
             _phantom: std::marker::PhantomData,
         }
     }
-
-    /// Generate settings file name based on store name
-    fn get_settings_name(store_name: &str) -> String {
-        if store_name.starts_with('[') && store_name.ends_with(']') {
-            // Placeholder: combine placeholder and type name
-            format!(
-                "{}_{}",
-                &store_name[1..store_name.len() - 1],
-                T::type_name()
-            )
-        } else {
-            // Regular name: just use type name
-            T::type_name().to_string()
-        }
-    }
 }
 
 impl<T: Settings> SettingsHandler for TypedSettingsHandler<T> {
     fn load_and_insert(
         &self,
         app: &mut App,
-        store_name: &str,
-        format: SerializationFormat,
-        base_path: &str,
+        storage: &UnifiedStorage,
     ) {
-        let mut storage = SettingsStorage::new(format);
-        storage = storage.with_base_path(base_path);
+        let type_key = get_type_key::<T>();
 
-        let settings_name = Self::get_settings_name(store_name);
+        // Load all settings from unified file
+        let all_settings = storage.load_all().unwrap_or_else(|e| {
+            warn!("Failed to load unified settings: {}. Using defaults.", e);
+            serde_json::Map::new()
+        });
 
-        // Load settings or use defaults
-        let settings = storage.load::<T>(&settings_name).unwrap_or_else(|e| {
+        // Get delta for this type and merge with defaults
+        let delta = all_settings.get(&type_key);
+        let settings = merge_with_defaults::<T>(delta).unwrap_or_else(|e| {
             warn!(
-                "Failed to load settings for {}: {}. Using defaults.",
+                "Failed to merge settings for {}: {}. Using defaults.",
                 T::type_name(),
                 e
             );
@@ -237,14 +240,9 @@ impl<T: Settings> SettingsHandler for TypedSettingsHandler<T> {
 
         // Insert as resource
         app.insert_resource(settings);
-        app.insert_resource(SettingsManager::<T> {
-            name: settings_name,
-            storage,
-            _phantom: std::marker::PhantomData,
-        });
     }
 
     fn register_save_system(&self, app: &mut App) {
-        app.add_systems(PostUpdate, save_settings_on_change::<T>);
+        app.add_systems(PostUpdate, save_unified_settings_on_change::<T>);
     }
 }

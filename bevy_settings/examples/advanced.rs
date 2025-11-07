@@ -77,21 +77,15 @@ fn main() {
     let mut app = App::new();
 
     app.add_plugins(MinimalPlugins)
-        // Add multiple settings with different formats using the new API
+        // Add multiple settings with unified storage
         .add_plugins(
-            SettingsPlugin::new()
-                .register::<VideoSettings>(
-                    SettingsConfig::new("video", SerializationFormat::Json)
-                        .with_base_path("config"),
-                )
-                .register::<AudioSettings>(
-                    SettingsConfig::new("audio", SerializationFormat::Json)
-                        .with_base_path("config"),
-                )
-                .register::<GameplaySettings>(
-                    SettingsConfig::new("gameplay", SerializationFormat::Binary)
-                        .with_base_path("config"),
-                ),
+            SettingsPlugin::new("GameSettings")
+                .format(SerializationFormat::Json)
+                .version("0.1.0")
+                .with_base_path("config")
+                .register::<VideoSettings>()
+                .register::<AudioSettings>()
+                .register::<GameplaySettings>(),
         )
         .add_systems(Startup, print_initial_settings)
         .add_systems(Update, (modify_settings, check_and_exit).chain());
@@ -145,9 +139,7 @@ fn modify_settings(
 
         println!("Settings will be saved automatically!");
         println!("Check the 'config/' directory for:");
-        println!("  - video.json (JSON format)");
-        println!("  - audio.json (JSON format)");
-        println!("  - gameplay.bin (Binary format)\n");
+        println!("  - GameSettings.json (unified settings file with all settings)\n");
     }
 }
 

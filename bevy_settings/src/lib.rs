@@ -95,6 +95,7 @@ mod plugin;
 mod settings_store;
 mod storage;
 mod trait_def;
+mod unified_storage;
 
 pub use error::SettingsError;
 pub use format::SerializationFormat;
