@@ -2,10 +2,7 @@ use crate::{
     SerializationFormat, Settings, SettingsStorage,
     common::{SettingsManager, save_settings_on_change},
 };
-use bevy::{
-    app::{App, Plugin, PostUpdate},
-    log::warn,
-};
+use bevy::prelude::*;
 use std::marker::PhantomData;
 
 /// Plugin for managing all settings in Bevy using a fluent builder API.

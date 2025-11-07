@@ -1,9 +1,5 @@
 use crate::{Settings, SettingsStorage};
-use bevy::{
-    ecs::{change_detection::DetectChanges, resource::Resource},
-    log::{error, info},
-    prelude::Res,
-};
+use bevy::prelude::*;
 
 /// Resource that manages settings persistence for a specific settings type
 #[derive(Resource, Clone)]

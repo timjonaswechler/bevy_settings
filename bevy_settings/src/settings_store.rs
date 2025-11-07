@@ -2,11 +2,7 @@ use crate::{
     SerializationFormat, Settings, SettingsStorage,
     common::{SettingsManager, save_settings_on_change},
 };
-use bevy::{
-    app::{App, Plugin, PostUpdate},
-    ecs::resource::Resource,
-    log::warn,
-};
+use bevy::prelude::*;
 
 /// A fluent API for managing settings in Bevy
 ///
