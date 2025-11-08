@@ -47,13 +47,13 @@ impl Storage {
             .join(format!("{}.{}", self.filename, self.format.extension()))
     }
 
-    /// Load all settings from the file
-    pub(crate) fn load_all(&self) -> Result<Map<String, Value>> {
+    /// Load all settings from the file, returning both settings and version info
+    pub(crate) fn load_all_with_versions(&self) -> Result<(Map<String, Value>, Map<String, Value>)> {
         let path = self.get_path();
 
-        // If file doesn't exist, return empty map
+        // If file doesn't exist, return empty maps
         if !path.exists() {
-            return Ok(Map::new());
+            return Ok((Map::new(), Map::new()));
         }
 
         let content = fs::read(&path)?;
@@ -69,14 +69,25 @@ impl Storage {
             }
         };
 
-        // Extract the settings map (skip version field)
+        // Extract the settings map and versions
         if let Value::Object(mut map) = root {
-            // Remove version from the map (it's metadata, not settings)
-            map.remove("version");
-            Ok(map)
+            // Extract version info (per-section versions)
+            let versions = if let Some(Value::Object(versions_obj)) = map.remove("_versions") {
+                versions_obj
+            } else {
+                Map::new()
+            };
+
+            Ok((map, versions))
         } else {
-            Ok(Map::new())
+            Ok((Map::new(), Map::new()))
         }
+    }
+
+    /// Load all settings from the file
+    pub(crate) fn load_all(&self) -> Result<Map<String, Value>> {
+        let (settings, _versions) = self.load_all_with_versions()?;
+        Ok(settings)
     }
 
     /// Load a specific settings type from the file
@@ -103,8 +114,12 @@ impl Storage {
         }
     }
 
-    /// Save multiple settings types to the file
-    pub(crate) fn save_all(&self, settings_map: &HashMap<String, Value>) -> Result<()> {
+    /// Save multiple settings types to the file with version information
+    pub(crate) fn save_all_with_versions(
+        &self,
+        settings_map: &HashMap<String, Value>,
+        versions: &HashMap<String, String>,
+    ) -> Result<()> {
         let path = self.get_path();
 
         // If all settings are empty (equal to defaults), delete the file
@@ -115,12 +130,16 @@ impl Storage {
             return Ok(());
         }
 
-        // Build the root object with version and all settings
+        // Build the root object with version info and all settings
         let mut root = Map::new();
 
-        // Add version if present
-        if let Some(ref version) = self.version {
-            root.insert("version".to_string(), Value::String(version.clone()));
+        // Add version information per section
+        if !versions.is_empty() {
+            let mut versions_obj = Map::new();
+            for (section, version) in versions {
+                versions_obj.insert(section.clone(), Value::String(version.clone()));
+            }
+            root.insert("_versions".to_string(), Value::Object(versions_obj));
         }
 
         // Add all settings
@@ -150,6 +169,11 @@ impl Storage {
 
         fs::write(&path, content)?;
         Ok(())
+    }
+
+    /// Save multiple settings types to the file
+    pub(crate) fn save_all(&self, settings_map: &HashMap<String, Value>) -> Result<()> {
+        self.save_all_with_versions(settings_map, &HashMap::new())
     }
 
     /// Delete the settings file
@@ -284,8 +308,11 @@ pub(crate) fn save_settings_on_change<T: Settings>(
             map.remove(&type_key);
         }
 
+        // Get versions
+        let versions = manager.versions.lock().unwrap();
+
         // Save all settings to disk
-        if let Err(e) = manager.storage.save_all(&map) {
+        if let Err(e) = manager.storage.save_all_with_versions(&map, &versions) {
             error!("Failed to save settings: {}", e);
         } else {
             info!("Settings saved");
@@ -298,11 +325,13 @@ pub(crate) struct SettingsManager {
     /// Shared map of all settings values (type_key -> JSON value)
     /// Using Arc<Mutex<>> to allow multiple systems to update the same map
     pub settings_map: Arc<Mutex<HashMap<String, Value>>>,
+    /// Shared map of version information per section (section_name -> version string)
+    pub versions: Arc<Mutex<HashMap<String, String>>>,
 }
 
-/// Get the type key for a settings type (lowercase type name)
+/// Get the type key for a settings type (uses SECTION constant)
 pub(crate) fn get_type_key<T: Settings>() -> String {
-    T::type_name().to_lowercase()
+    T::SECTION.to_string()
 }
 
 #[cfg(test)]
@@ -328,6 +357,8 @@ mod tests {
         fn type_name() -> &'static str {
             "TestSettings"
         }
+
+        const SECTION: &'static str = "testsettings";
     }
 
     #[test]

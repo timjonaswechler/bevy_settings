@@ -24,12 +24,16 @@ use syn::{parse_macro_input, DeriveInput};
 pub fn derive_settings(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
+    let name_str = name.to_string();
+    let section_name = name_str.to_lowercase();
 
     let expanded = quote! {
         impl bevy_settings::Settings for #name {
             fn type_name() -> &'static str {
                 stringify!(#name)
             }
+
+            const SECTION: &'static str = #section_name;
         }
     };
 

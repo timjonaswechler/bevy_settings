@@ -66,7 +66,16 @@ impl SettingsPlugin {
     }
 
     pub fn register<T: Settings + 'static>(mut self) -> Self {
-        let handler = Box::new(TypedSettingsHandler::<T>::new());
+        let handler = Box::new(TypedSettingsHandler::<T>::new(None));
+        self.handlers.push(handler);
+        self
+    }
+
+    pub fn register_with_version<T: Settings + 'static>(
+        mut self,
+        version: impl Into<String>,
+    ) -> Self {
+        let handler = Box::new(TypedSettingsHandler::<T>::new(Some(version.into())));
         self.handlers.push(handler);
         self
     }
@@ -80,36 +89,69 @@ impl Default for SettingsPlugin {
 
 /// Internal trait for type-erased settings operations
 trait SettingsHandler: Send + Sync {
-    fn load_and_insert(&self, app: &mut App, storage: &Storage);
+    fn load_and_insert(&self, app: &mut App, storage: &Storage, versions: &mut HashMap<String, String>);
     fn register_save_system(&self, app: &mut App);
 }
 
 /// Concrete implementation of SettingsHandler for a specific type
 struct TypedSettingsHandler<T: Settings> {
     _phantom: PhantomData<T>,
+    version: Option<String>,
 }
 
 impl<T: Settings> TypedSettingsHandler<T> {
-    fn new() -> Self {
+    fn new(version: Option<String>) -> Self {
         Self {
             _phantom: PhantomData,
+            version,
         }
     }
 }
 
 impl<T: Settings> SettingsHandler for TypedSettingsHandler<T> {
-    fn load_and_insert(&self, app: &mut App, storage: &Storage) {
+    fn load_and_insert(&self, app: &mut App, storage: &Storage, versions: &mut HashMap<String, String>) {
         let type_key = get_type_key::<T>();
 
-        // Load all settings from file
-        let all_settings = storage.load_all().unwrap_or_else(|e| {
+        // Load all settings and version info from file
+        let (all_settings, file_versions) = storage.load_all_with_versions().unwrap_or_else(|e| {
             warn!("Failed to load settings: {}. Using defaults.", e);
-            serde_json::Map::new()
+            (serde_json::Map::new(), serde_json::Map::new())
         });
 
-        // Get delta for this type and merge with defaults
+        // Get delta for this type
         let delta = all_settings.get(&type_key);
-        let settings = merge_with_defaults::<T>(delta).unwrap_or_else(|e| {
+
+        // Parse versions
+        let file_version = file_versions
+            .get(&type_key)
+            .and_then(|v| v.as_str())
+            .and_then(|s| semver::Version::parse(s).ok());
+
+        let target_version = self
+            .version
+            .as_ref()
+            .and_then(|s| semver::Version::parse(s).ok());
+
+        // Apply migration if needed
+        let migrated_delta = if let Some(delta_value) = delta {
+            match T::migrate(file_version.as_ref(), target_version.as_ref().unwrap_or(&semver::Version::new(0, 0, 0)), delta_value.clone()) {
+                Ok((migrated, changed)) => {
+                    if changed {
+                        info!("Migrated settings for {} from {:?} to {:?}", T::type_name(), file_version, target_version);
+                    }
+                    Some(migrated)
+                }
+                Err(e) => {
+                    warn!("Failed to migrate settings for {}: {}. Using delta as-is.", T::type_name(), e);
+                    Some(delta_value.clone())
+                }
+            }
+        } else {
+            None
+        };
+
+        // Merge with defaults
+        let settings = merge_with_defaults::<T>(migrated_delta.as_ref()).unwrap_or_else(|e| {
             warn!(
                 "Failed to merge settings for {}: {}. Using defaults.",
                 T::type_name(),
@@ -117,6 +159,11 @@ impl<T: Settings> SettingsHandler for TypedSettingsHandler<T> {
             );
             T::default()
         });
+
+        // Store version for this section if provided
+        if let Some(ref version_str) = self.version {
+            versions.insert(type_key.clone(), version_str.clone());
+        }
 
         // Insert as resource
         app.insert_resource(settings);
@@ -130,14 +177,16 @@ impl<T: Settings> SettingsHandler for TypedSettingsHandler<T> {
 impl Plugin for SettingsPlugin {
     fn build(&self, app: &mut App) {
         let storage = self.storage.clone();
+        let mut versions = HashMap::new();
 
         for handler in &self.handlers {
-            handler.load_and_insert(app, &storage);
+            handler.load_and_insert(app, &storage, &mut versions);
         }
 
         app.insert_resource(SettingsManager {
             storage,
             settings_map: Arc::new(Mutex::new(HashMap::new())),
+            versions: Arc::new(Mutex::new(versions)),
         });
 
         for handler in &self.handlers {
