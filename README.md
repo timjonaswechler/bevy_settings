@@ -14,6 +14,8 @@ A settings management system for [Bevy](https://bevyengine.org/) that:
 - **Automatic Saving**: Settings are automatically saved when modified
 - **Type-Safe**: Full Rust type safety with derive macros
 - **Bevy Integration**: Works seamlessly with Bevy's resource system
+- **Version Migration**: Semantic versioning support with automatic migration between versions
+- **Custom Sections**: Define custom section names for settings in the unified file
 
 ## Installation
 
@@ -51,7 +53,6 @@ fn main() {
         .add_plugins(
             SettingsPlugin::new("GameSettings")
                 .format(SerializationFormat::Json)
-                .version("0.1.0")
                 .with_base_path("config")
                 .register::<GameSettings>()
                 .register::<GraphicsSettings>()
@@ -69,7 +70,9 @@ That's it! Your settings will be:
 The file will look like:
 ```json
 {
-  "version": "0.1.0",
+  "_versions": {
+    "gamesettings": "1.0.0"
+  },
   "gamesettings": {
     "volume": 0.8,
     "resolution": [1920, 1080],
@@ -80,6 +83,8 @@ The file will look like:
   }
 }
 ```
+
+Note: Version tracking is optional. Use `register_with_version` to enable it for specific settings.
 
 ## Usage
 
@@ -111,7 +116,6 @@ App::new()
     .add_plugins(
         SettingsPlugin::new("GameSettings")
             .format(SerializationFormat::Json)
-            .version("0.1.0")
             .with_base_path("config")
             .register::<MySettings>()
     )
@@ -173,7 +177,6 @@ SerializationFormat::Json
 Creates human-readable `.json` files with all registered settings in a unified structure:
 ```json
 {
-  "version": "0.1.0",
   "mysettings": {
     "volume": 0.8,
     "resolution": [1920, 1080],
@@ -181,6 +184,8 @@ Creates human-readable `.json` files with all registered settings in a unified s
   }
 }
 ```
+
+If version tracking is enabled, a `_versions` field is also included.
 
 ### Binary (Compact)
 
@@ -207,7 +212,6 @@ App::new()
     .add_plugins(
         SettingsPlugin::new("GameSettings")
             .format(SerializationFormat::Json)
-            .version("0.1.0")
             .with_base_path("config")
             .register::<GameSettings>()
             .register::<GraphicsSettings>()
@@ -218,7 +222,6 @@ App::new()
 This creates a single file `config/GameSettings.json`:
 ```json
 {
-  "version": "0.1.0",
   "gamesettings": { /* ... */ },
   "graphicssettings": { /* ... */ }
 }
@@ -234,6 +237,121 @@ fn on_settings_change(settings: Res<MySettings>) {
         println!("Settings changed!");
         // Apply settings to your game
     }
+}
+```
+
+## Version Migration
+
+Settings can implement version-aware migrations to handle breaking changes between versions.
+
+### Basic Setup
+
+Register settings with a version:
+
+```rust
+use bevy_settings::{SettingsPlugin, Settings};
+use serde::{Deserialize, Serialize};
+
+#[derive(Resource, Serialize, Deserialize, Clone, PartialEq, Debug)]
+struct NetworkSettings {
+    server_url: String,
+    port: u16,
+    #[serde(default)]
+    timeout_seconds: Option<u32>,  // Added in v2.0.0
+}
+
+impl Default for NetworkSettings {
+    fn default() -> Self {
+        Self {
+            server_url: "https://example.com".to_string(),
+            port: 8080,
+            timeout_seconds: Some(30),
+        }
+    }
+}
+
+impl Settings for NetworkSettings {
+    fn type_name() -> &'static str {
+        "NetworkSettings"
+    }
+
+    // Optional: Custom section name (default is lowercase type name)
+    const SECTION: &'static str = "network";
+
+    // Optional: Implement migration logic
+    fn migrate(
+        file_version: Option<&semver::Version>,
+        target_version: &semver::Version,
+        mut data: serde_json::Value,
+    ) -> Result<(serde_json::Value, bool), bevy_settings::SettingsError> {
+        let mut changed = false;
+
+        // Migrate from v1.x to v2.0.0+: add timeout_seconds field
+        if let Some(file_ver) = file_version {
+            if file_ver < &semver::Version::new(2, 0, 0) 
+                && target_version >= &semver::Version::new(2, 0, 0) 
+            {
+                if let serde_json::Value::Object(ref mut map) = data {
+                    if !map.contains_key("timeout_seconds") {
+                        map.insert(
+                            "timeout_seconds".to_string(),
+                            serde_json::Value::Number(30.into()),
+                        );
+                        changed = true;
+                    }
+                }
+            }
+        }
+
+        Ok((data, changed))
+    }
+}
+
+// Register with version tracking
+App::new()
+    .add_plugins(
+        SettingsPlugin::new("GameSettings")
+            .format(SerializationFormat::Json)
+            .with_base_path("config")
+            .register_with_version::<NetworkSettings>("2.0.0")
+    )
+    .run();
+```
+
+### How Migration Works
+
+1. When settings are loaded, the system checks the version stored in the file
+2. If the file version differs from the target version, `migrate()` is called
+3. The migration function receives:
+   - `file_version`: The version stored in the file (None if not present)
+   - `target_version`: The current version you're migrating to
+   - `data`: The raw settings data as JSON
+4. Return the migrated data and whether changes were made
+5. Migrated settings are automatically saved with the new version
+
+### Custom Section Names
+
+By default, section names are the lowercase type name. You can customize this:
+
+```rust
+impl Settings for NetworkSettings {
+    const SECTION: &'static str = "network";  // instead of "networksettings"
+    // ...
+}
+```
+
+This affects how the settings appear in the unified file:
+
+```json
+{
+  "_versions": {
+    "network": "2.0.0"
+  },
+  "network": {
+    "server_url": "https://example.com",
+    "port": 8080,
+    "timeout_seconds": 30
+  }
 }
 ```
 
@@ -253,6 +371,9 @@ cargo run --example advanced
 
 # New API example showing the simplified registration
 cargo run --example new_api
+
+# Migration example demonstrating version migrations and custom sections
+cargo run --example migration
 ```
 
 ## How It Works
