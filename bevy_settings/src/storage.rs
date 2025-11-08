@@ -1,4 +1,4 @@
-use crate::{error::Result, SerializationFormat, Settings};
+use crate::{SerializationFormat, Settings, error::Result};
 use bevy::prelude::*;
 use serde_json::{Map, Value};
 use std::collections::HashMap;
@@ -48,7 +48,9 @@ impl Storage {
     }
 
     /// Load all settings from the file, returning both settings and version info
-    pub(crate) fn load_all_with_versions(&self) -> Result<(Map<String, Value>, Map<String, Value>)> {
+    pub(crate) fn load_all_with_versions(
+        &self,
+    ) -> Result<(Map<String, Value>, Map<String, Value>)> {
         let path = self.get_path();
 
         // If file doesn't exist, return empty maps
@@ -306,10 +308,6 @@ mod tests {
 
     impl bevy::prelude::Resource for TestSettings {}
     impl Settings for TestSettings {
-        fn type_name() -> &'static str {
-            "TestSettings"
-        }
-
         const SECTION: &'static str = "testsettings";
     }
 

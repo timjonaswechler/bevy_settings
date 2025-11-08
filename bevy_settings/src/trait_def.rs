@@ -15,11 +15,8 @@ use serde::{Deserialize, Serialize};
 pub trait Settings:
     Resource + Serialize + for<'de> Deserialize<'de> + Default + Clone + PartialEq
 {
-    /// Get the type name of the settings struct
-    fn type_name() -> &'static str;
-
     /// The section name for this settings type in the settings file
-    /// 
+    ///
     /// By default, this is the lowercase version of the type name.
     /// Can be overridden by implementing this constant manually.
     const SECTION: &'static str;

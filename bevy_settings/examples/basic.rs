@@ -1,9 +1,9 @@
 use bevy::prelude::*;
-use bevy_settings::{prelude::*, Settings};
+use bevy_settings::{Settings, prelude::*};
 use serde::{Deserialize, Serialize};
 
 /// Example game settings with various configuration options
-#[derive(Settings, Resource, Serialize, Deserialize, Default, Clone, PartialEq, Debug)]
+#[derive(Resource, Serialize, Deserialize, Default, Clone, PartialEq, Debug)]
 struct GameSettings {
     /// Master volume (0.0 - 1.0)
     volume: f32,
@@ -15,8 +15,12 @@ struct GameSettings {
     player_name: String,
 }
 
+impl Settings for GameSettings {
+    const SECTION: &'static str = "game";
+}
+
 /// Example graphics settings
-#[derive(Settings, Resource, Serialize, Deserialize, Default, Clone, PartialEq, Debug)]
+#[derive(Resource, Serialize, Deserialize, Default, Clone, PartialEq, Debug)]
 struct GraphicsSettings {
     /// Graphics quality level
     quality: GraphicsQuality,
@@ -24,6 +28,10 @@ struct GraphicsSettings {
     vsync: bool,
     /// Field of view
     fov: f32,
+}
+
+impl Settings for GraphicsSettings {
+    const SECTION: &'static str = "graphics";
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, PartialEq, Debug)]
@@ -66,14 +74,14 @@ fn setup(
     info!("  R - Reset to defaults");
     info!("  ESC - Exit");
 
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn(Camera2d::default());
 }
 
 fn handle_input(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut game_settings: ResMut<GameSettings>,
     mut graphics_settings: ResMut<GraphicsSettings>,
-    mut exit: EventWriter<AppExit>,
+    mut exit: MessageWriter<AppExit>,
 ) {
     // Toggle volume
     if keyboard.just_pressed(KeyCode::KeyV) {
@@ -107,7 +115,7 @@ fn handle_input(
 
     // Exit
     if keyboard.just_pressed(KeyCode::Escape) {
-        exit.send(AppExit::Success);
+        exit.write(AppExit::Success);
     }
 }
 

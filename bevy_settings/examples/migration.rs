@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_settings::{prelude::*, Settings};
+use bevy_settings::{Settings, prelude::*};
 use serde::{Deserialize, Serialize};
 
 /// Network settings with versioning and migration support
@@ -27,10 +27,6 @@ impl Default for NetworkSettings {
 }
 
 impl Settings for NetworkSettings {
-    fn type_name() -> &'static str {
-        "NetworkSettings"
-    }
-
     // Custom section name instead of default "networksettings"
     const SECTION: &'static str = "network";
 
@@ -70,10 +66,14 @@ impl Settings for NetworkSettings {
 }
 
 /// Game settings demonstrating another settings type
-#[derive(Settings, Resource, Serialize, Deserialize, Default, Clone, PartialEq, Debug)]
+#[derive(Resource, Serialize, Deserialize, Default, Clone, PartialEq, Debug)]
 struct GameSettings {
     volume: f32,
     fullscreen: bool,
+}
+
+impl Settings for GameSettings {
+    const SECTION: &'static str = "GameSettings";
 }
 
 fn main() {
@@ -88,7 +88,7 @@ fn main() {
         .add_plugins(
             SettingsPlugin::new("GameSettings")
                 .format(SerializationFormat::Json)
-                .version("2.0.0")  // All registered settings use this version
+                .version("2.0.0") // All registered settings use this version
                 .with_base_path("config")
                 .register::<NetworkSettings>()
                 .register::<GameSettings>(),
@@ -120,7 +120,7 @@ fn modify_settings(
     time: Res<Time>,
 ) {
     // Modify settings after 0.5 seconds (only once)
-    if time.elapsed_seconds() > 0.5 && time.elapsed_seconds() < 0.51 {
+    if time.elapsed_secs() > 0.5 && time.elapsed_secs() < 0.51 {
         network.server_url = "https://api.example.com".to_string();
         network.port = 9000;
         network.timeout_seconds = Some(60);
@@ -143,7 +143,7 @@ fn modify_settings(
 
 fn check_and_exit(time: Res<Time>) {
     // Exit after 2 seconds
-    if time.elapsed_seconds() > 2.0 {
+    if time.elapsed_secs() > 2.0 {
         println!("Example complete!");
         std::process::exit(0);
     }

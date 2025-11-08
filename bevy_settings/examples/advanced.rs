@@ -8,16 +8,20 @@
 //! - Custom base path for settings storage
 
 use bevy::prelude::*;
-use bevy_settings::{prelude::*, Settings};
+use bevy_settings::{Settings, prelude::*};
 use serde::{Deserialize, Serialize};
 
 /// Video settings with nested configuration
-#[derive(Settings, Resource, Serialize, Deserialize, Default, Clone, PartialEq, Debug)]
+#[derive(Resource, Serialize, Deserialize, Default, Clone, PartialEq, Debug)]
 struct VideoSettings {
     resolution: Resolution,
     display_mode: DisplayMode,
     vsync: bool,
     fps_limit: Option<u32>,
+}
+
+impl Settings for VideoSettings {
+    const SECTION: &'static str = "video";
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
@@ -44,7 +48,7 @@ enum DisplayMode {
 }
 
 /// Audio settings with multiple channels
-#[derive(Settings, Resource, Serialize, Deserialize, Default, Clone, PartialEq, Debug)]
+#[derive(Resource, Serialize, Deserialize, Default, Clone, PartialEq, Debug)]
 struct AudioSettings {
     master: f32,
     music: f32,
@@ -53,13 +57,21 @@ struct AudioSettings {
     muted_channels: Vec<String>,
 }
 
+impl Settings for AudioSettings {
+    const SECTION: &'static str = "audio";
+}
+
 /// Gameplay settings with preferences
-#[derive(Settings, Resource, Serialize, Deserialize, Default, Clone, PartialEq, Debug)]
+#[derive(Resource, Serialize, Deserialize, Default, Clone, PartialEq, Debug)]
 struct GameplaySettings {
     difficulty: Difficulty,
     auto_save: bool,
     mouse_sensitivity: f32,
     invert_y: bool,
+}
+
+impl Settings for GameplaySettings {
+    const SECTION: &'static str = "gameplay";
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, PartialEq, Debug)]
@@ -112,7 +124,7 @@ fn modify_settings(
     mut modified: Local<bool>,
 ) {
     // Only modify once, after a short delay to ensure the app is fully initialized
-    if !*modified && time.elapsed_seconds() > 0.1 {
+    if !*modified && time.elapsed_secs() > 0.1 {
         *modified = true;
 
         // Modify video settings
@@ -144,7 +156,7 @@ fn modify_settings(
 }
 
 fn check_and_exit(time: Res<Time>) {
-    if time.elapsed_seconds() > 2.0 {
+    if time.elapsed_secs() > 2.0 {
         println!("Settings have been saved. Exiting...");
         std::process::exit(0);
     }

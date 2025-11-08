@@ -1,13 +1,17 @@
 use bevy::prelude::*;
-use bevy_settings::{prelude::*, Settings};
+use bevy_settings::{Settings, prelude::*};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 
-#[derive(Settings, Resource, Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[derive(Resource, Serialize, Deserialize, Clone, PartialEq, Debug)]
 struct TestSettings {
     value: i32,
     name: String,
+}
+
+impl Settings for TestSettings {
+    const SECTION: &'static str = "TestSettings";
 }
 
 impl Default for TestSettings {
@@ -229,10 +233,6 @@ impl Default for MigratableSettings {
 }
 
 impl Settings for MigratableSettings {
-    fn type_name() -> &'static str {
-        "MigratableSettings"
-    }
-
     const SECTION: &'static str = "migratable";
 
     fn migrate(
@@ -244,8 +244,8 @@ impl Settings for MigratableSettings {
 
         // If file version is less than 2.0.0, add the new_field
         if let Some(file_ver) = file_version {
-            if file_ver < &semver::Version::new(2, 0, 0) 
-                && target_version >= &semver::Version::new(2, 0, 0) 
+            if file_ver < &semver::Version::new(2, 0, 0)
+                && target_version >= &semver::Version::new(2, 0, 0)
             {
                 if let serde_json::Value::Object(ref mut map) = data {
                     if !map.contains_key("new_field") {
@@ -303,14 +303,14 @@ fn test_migration_adds_new_field() {
     let settings_file = get_test_path(test_name).join("TestSettings.json");
     let content = fs::read_to_string(&settings_file).unwrap();
     let mut json: serde_json::Value = serde_json::from_str(&content).unwrap();
-    
+
     // Remove new_field from the migratable section to simulate old data
     if let Some(migratable) = json.get_mut("migratable") {
-        if let serde_json::Value::Object(ref mut map) = migratable {
+        if let serde_json::Value::Object(map) = migratable {
             map.remove("new_field");
         }
     }
-    
+
     fs::write(&settings_file, serde_json::to_string_pretty(&json).unwrap()).unwrap();
 
     // Now load with version 2.0.0 - migration should add new_field
@@ -363,7 +363,7 @@ fn test_version_tracking() {
     let settings_file = get_test_path(test_name).join("TestSettings.json");
     let content = fs::read_to_string(&settings_file).unwrap();
     let json: serde_json::Value = serde_json::from_str(&content).unwrap();
-    
+
     // Check for version info
     assert!(json.get("_versions").is_some());
     let versions = json.get("_versions").unwrap();
@@ -402,7 +402,7 @@ fn test_default_package_version() {
     let settings_file = get_test_path(test_name).join("TestSettings.json");
     let content = fs::read_to_string(&settings_file).unwrap();
     let json: serde_json::Value = serde_json::from_str(&content).unwrap();
-    
+
     // Check for version info - should be package version
     assert!(json.get("_versions").is_some());
     let versions = json.get("_versions").unwrap();

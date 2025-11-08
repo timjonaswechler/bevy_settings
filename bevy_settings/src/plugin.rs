@@ -1,8 +1,8 @@
 use crate::{
-    storage::{
-        get_type_key, merge_with_defaults, save_settings_on_change, SettingsManager, Storage,
-    },
     SerializationFormat, Settings,
+    storage::{
+        SettingsManager, Storage, get_type_key, merge_with_defaults, save_settings_on_change,
+    },
 };
 use bevy::prelude::*;
 use std::collections::HashMap;
@@ -82,7 +82,12 @@ impl Default for SettingsPlugin {
 
 /// Internal trait for type-erased settings operations
 trait SettingsHandler: Send + Sync {
-    fn load_and_insert(&self, app: &mut App, storage: &Storage, versions: &mut HashMap<String, String>);
+    fn load_and_insert(
+        &self,
+        app: &mut App,
+        storage: &Storage,
+        versions: &mut HashMap<String, String>,
+    );
     fn register_save_system(&self, app: &mut App);
 }
 
@@ -100,7 +105,12 @@ impl<T: Settings> TypedSettingsHandler<T> {
 }
 
 impl<T: Settings> SettingsHandler for TypedSettingsHandler<T> {
-    fn load_and_insert(&self, app: &mut App, storage: &Storage, versions: &mut HashMap<String, String>) {
+    fn load_and_insert(
+        &self,
+        app: &mut App,
+        storage: &Storage,
+        versions: &mut HashMap<String, String>,
+    ) {
         let type_key = get_type_key::<T>();
 
         // Load all settings and version info from file
@@ -125,15 +135,30 @@ impl<T: Settings> SettingsHandler for TypedSettingsHandler<T> {
 
         // Apply migration if needed
         let migrated_delta = if let Some(delta_value) = delta {
-            match T::migrate(file_version.as_ref(), target_version.as_ref().unwrap_or(&semver::Version::new(0, 0, 0)), delta_value.clone()) {
+            match T::migrate(
+                file_version.as_ref(),
+                target_version
+                    .as_ref()
+                    .unwrap_or(&semver::Version::new(0, 0, 0)),
+                delta_value.clone(),
+            ) {
                 Ok((migrated, changed)) => {
                     if changed {
-                        info!("Migrated settings for {} from {:?} to {:?}", T::type_name(), file_version, target_version);
+                        info!(
+                            "Migrated settings for {} from {:?} to {:?}",
+                            T::SECTION,
+                            file_version,
+                            target_version
+                        );
                     }
                     Some(migrated)
                 }
                 Err(e) => {
-                    warn!("Failed to migrate settings for {}: {}. Using delta as-is.", T::type_name(), e);
+                    warn!(
+                        "Failed to migrate settings for {}: {}. Using delta as-is.",
+                        T::SECTION,
+                        e
+                    );
                     Some(delta_value.clone())
                 }
             }
@@ -145,7 +170,7 @@ impl<T: Settings> SettingsHandler for TypedSettingsHandler<T> {
         let settings = merge_with_defaults::<T>(migrated_delta.as_ref()).unwrap_or_else(|e| {
             warn!(
                 "Failed to merge settings for {}: {}. Using defaults.",
-                T::type_name(),
+                T::SECTION,
                 e
             );
             T::default()

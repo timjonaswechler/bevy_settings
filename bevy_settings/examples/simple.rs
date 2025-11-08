@@ -1,9 +1,9 @@
 use bevy::prelude::*;
-use bevy_settings::{prelude::*, Settings};
+use bevy_settings::{Settings, prelude::*};
 use serde::{Deserialize, Serialize};
 
 /// Simple audio settings example
-#[derive(Settings, Resource, Serialize, Deserialize, Default, Clone, PartialEq, Debug)]
+#[derive(Resource, Serialize, Deserialize, Default, Clone, PartialEq, Debug)]
 struct AudioSettings {
     #[serde(default)]
     master_volume: f32,
@@ -11,6 +11,10 @@ struct AudioSettings {
     music_volume: f32,
     #[serde(default)]
     sfx_volume: f32,
+}
+
+impl Settings for AudioSettings {
+    const SECTION: &'static str = "audio";
 }
 
 fn main() {
@@ -36,7 +40,7 @@ fn print_settings(settings: Res<AudioSettings>) {
 
 fn modify_settings(mut settings: ResMut<AudioSettings>, time: Res<Time>) {
     // Modify settings after 2 seconds
-    if time.elapsed_seconds() > 2.0 && time.elapsed_seconds() < 2.1 {
+    if time.elapsed_secs() > 2.0 && time.elapsed_secs() < 2.1 {
         settings.master_volume = 0.8;
         settings.music_volume = 0.6;
         settings.sfx_volume = 0.9;
@@ -44,7 +48,7 @@ fn modify_settings(mut settings: ResMut<AudioSettings>, time: Res<Time>) {
     }
 
     // Exit after 3 seconds
-    if time.elapsed_seconds() > 3.0 {
+    if time.elapsed_secs() > 3.0 {
         std::process::exit(0);
     }
 }
