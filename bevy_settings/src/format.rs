@@ -12,7 +12,7 @@ impl SerializationFormat {
     pub fn extension(&self) -> &'static str {
         match self {
             SerializationFormat::Json => "json",
-            SerializationFormat::Binary => "",
+            SerializationFormat::Binary => "bin",
         }
     }
 }
