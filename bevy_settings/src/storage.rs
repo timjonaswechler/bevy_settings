@@ -84,36 +84,6 @@ impl Storage {
         }
     }
 
-    /// Load all settings from the file
-    pub(crate) fn load_all(&self) -> Result<Map<String, Value>> {
-        let (settings, _versions) = self.load_all_with_versions()?;
-        Ok(settings)
-    }
-
-    /// Load a specific settings type from the file
-    ///
-    /// This method is provided for manual control over loading. When using the plugin system,
-    /// settings are loaded automatically.
-    ///
-    /// # Arguments
-    /// * `type_key` - The lowercase type name (e.g., "audiosettings" for AudioSettings)
-    ///
-    /// # Returns
-    /// Returns the merged settings (defaults + saved delta) or defaults if not found
-    #[allow(dead_code)]
-    pub(crate) fn load<T: Settings>(&self, type_key: &str) -> Result<T> {
-        let all_settings = self.load_all()?;
-
-        // Try to find settings for this type
-        if let Some(value) = all_settings.get(type_key) {
-            let settings: T = serde_json::from_value(value.clone())?;
-            Ok(settings)
-        } else {
-            // Not found, return defaults
-            Ok(T::default())
-        }
-    }
-
     /// Save multiple settings types to the file with version information
     pub(crate) fn save_all_with_versions(
         &self,
@@ -168,24 +138,6 @@ impl Storage {
         };
 
         fs::write(&path, content)?;
-        Ok(())
-    }
-
-    /// Save multiple settings types to the file
-    pub(crate) fn save_all(&self, settings_map: &HashMap<String, Value>) -> Result<()> {
-        self.save_all_with_versions(settings_map, &HashMap::new())
-    }
-
-    /// Delete the settings file
-    ///
-    /// This method is provided for manual control. When using the plugin system,
-    /// files are automatically deleted when all settings return to their defaults.
-    #[allow(dead_code)]
-    pub(crate) fn delete(&self) -> Result<()> {
-        let path = self.get_path();
-        if path.exists() {
-            fs::remove_file(&path)?;
-        }
         Ok(())
     }
 }
