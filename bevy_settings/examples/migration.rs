@@ -84,14 +84,13 @@ fn main() {
 
     App::new()
         .add_plugins(MinimalPlugins)
-        // Register multiple settings types with individual versions
+        // Register multiple settings types - all use the same version
         .add_plugins(
             SettingsPlugin::new("GameSettings")
                 .format(SerializationFormat::Json)
+                .version("2.0.0")  // All registered settings use this version
                 .with_base_path("config")
-                // Network settings are at version 2.0.0 (has migration logic)
-                .register_with_version::<NetworkSettings>("2.0.0")
-                // Game settings don't need versioning yet
+                .register::<NetworkSettings>()
                 .register::<GameSettings>(),
         )
         .add_systems(Startup, print_settings)

@@ -71,7 +71,8 @@ The file will look like:
 ```json
 {
   "_versions": {
-    "gamesettings": "1.0.0"
+    "gamesettings": "0.1.0",
+    "graphicssettings": "0.1.0"
   },
   "gamesettings": {
     "volume": 0.8,
@@ -84,7 +85,7 @@ The file will look like:
 }
 ```
 
-Note: Version tracking is optional. Use `register_with_version` to enable it for specific settings.
+Note: All registered settings use the same version (set via `.version()` or defaults to package version from Cargo.toml).
 
 ## Usage
 
@@ -312,11 +313,14 @@ App::new()
     .add_plugins(
         SettingsPlugin::new("GameSettings")
             .format(SerializationFormat::Json)
+            .version("2.0.0")  // All registered settings use this version
             .with_base_path("config")
-            .register_with_version::<NetworkSettings>("2.0.0")
+            .register::<NetworkSettings>()
     )
     .run();
 ```
+
+The version is set globally for all settings in the plugin. By default, if you don't call `.version()`, the package version from `Cargo.toml` is used automatically.
 
 ### How Migration Works
 

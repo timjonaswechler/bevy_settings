@@ -281,8 +281,9 @@ fn test_migration_adds_new_field() {
         app.add_plugins(MinimalPlugins).add_plugins(
             SettingsPlugin::new("TestSettings")
                 .format(SerializationFormat::Json)
+                .version("1.0.0")
                 .with_base_path(get_test_path(test_name).to_str().unwrap())
-                .register_with_version::<MigratableSettings>("1.0.0"),
+                .register::<MigratableSettings>(),
         );
 
         app.update();
@@ -318,8 +319,9 @@ fn test_migration_adds_new_field() {
         app.add_plugins(MinimalPlugins).add_plugins(
             SettingsPlugin::new("TestSettings")
                 .format(SerializationFormat::Json)
+                .version("2.0.0")
                 .with_base_path(get_test_path(test_name).to_str().unwrap())
-                .register_with_version::<MigratableSettings>("2.0.0"),
+                .register::<MigratableSettings>(),
         );
 
         app.update();
@@ -343,8 +345,9 @@ fn test_version_tracking() {
     app.add_plugins(MinimalPlugins).add_plugins(
         SettingsPlugin::new("TestSettings")
             .format(SerializationFormat::Json)
+            .version("1.0.0")
             .with_base_path(get_test_path(test_name).to_str().unwrap())
-            .register_with_version::<TestSettings>("1.0.0"),
+            .register::<TestSettings>(),
     );
 
     app.update();
@@ -367,6 +370,45 @@ fn test_version_tracking() {
     assert_eq!(
         versions.get("testsettings").and_then(|v| v.as_str()),
         Some("1.0.0")
+    );
+
+    cleanup_test(test_name);
+}
+
+#[test]
+fn test_default_package_version() {
+    let test_name = "test_default_package_version";
+    cleanup_test(test_name);
+
+    let mut app = App::new();
+    // Don't call .version() - should use package version by default
+    app.add_plugins(MinimalPlugins).add_plugins(
+        SettingsPlugin::new("TestSettings")
+            .format(SerializationFormat::Json)
+            .with_base_path(get_test_path(test_name).to_str().unwrap())
+            .register::<TestSettings>(),
+    );
+
+    app.update();
+
+    {
+        let mut settings = app.world_mut().resource_mut::<TestSettings>();
+        settings.value = 123;
+    }
+
+    app.update();
+
+    // Check that version is the package version
+    let settings_file = get_test_path(test_name).join("TestSettings.json");
+    let content = fs::read_to_string(&settings_file).unwrap();
+    let json: serde_json::Value = serde_json::from_str(&content).unwrap();
+    
+    // Check for version info - should be package version
+    assert!(json.get("_versions").is_some());
+    let versions = json.get("_versions").unwrap();
+    assert_eq!(
+        versions.get("testsettings").and_then(|v| v.as_str()),
+        Some(env!("CARGO_PKG_VERSION"))
     );
 
     cleanup_test(test_name);

@@ -43,7 +43,9 @@ pub struct SettingsPlugin {
 
 impl SettingsPlugin {
     pub fn new(name: impl Into<String>) -> Self {
-        let storage = Storage::new(name.into(), SerializationFormat::Json);
+        // Default to package version
+        let storage = Storage::new(name.into(), SerializationFormat::Json)
+            .with_version(env!("CARGO_PKG_VERSION"));
         Self {
             storage,
             handlers: Vec::new(),
@@ -66,16 +68,7 @@ impl SettingsPlugin {
     }
 
     pub fn register<T: Settings + 'static>(mut self) -> Self {
-        let handler = Box::new(TypedSettingsHandler::<T>::new(None));
-        self.handlers.push(handler);
-        self
-    }
-
-    pub fn register_with_version<T: Settings + 'static>(
-        mut self,
-        version: impl Into<String>,
-    ) -> Self {
-        let handler = Box::new(TypedSettingsHandler::<T>::new(Some(version.into())));
+        let handler = Box::new(TypedSettingsHandler::<T>::new());
         self.handlers.push(handler);
         self
     }
@@ -96,14 +89,12 @@ trait SettingsHandler: Send + Sync {
 /// Concrete implementation of SettingsHandler for a specific type
 struct TypedSettingsHandler<T: Settings> {
     _phantom: PhantomData<T>,
-    version: Option<String>,
 }
 
 impl<T: Settings> TypedSettingsHandler<T> {
-    fn new(version: Option<String>) -> Self {
+    fn new() -> Self {
         Self {
             _phantom: PhantomData,
-            version,
         }
     }
 }
@@ -121,13 +112,13 @@ impl<T: Settings> SettingsHandler for TypedSettingsHandler<T> {
         // Get delta for this type
         let delta = all_settings.get(&type_key);
 
-        // Parse versions
+        // Parse versions - use the storage version as target version
         let file_version = file_versions
             .get(&type_key)
             .and_then(|v| v.as_str())
             .and_then(|s| semver::Version::parse(s).ok());
 
-        let target_version = self
+        let target_version = storage
             .version
             .as_ref()
             .and_then(|s| semver::Version::parse(s).ok());
@@ -160,8 +151,8 @@ impl<T: Settings> SettingsHandler for TypedSettingsHandler<T> {
             T::default()
         });
 
-        // Store version for this section if provided
-        if let Some(ref version_str) = self.version {
+        // Store version for this section from storage
+        if let Some(ref version_str) = storage.version {
             versions.insert(type_key.clone(), version_str.clone());
         }
 
