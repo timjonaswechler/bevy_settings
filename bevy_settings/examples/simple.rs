@@ -23,9 +23,8 @@ fn main() {
         // Add the settings plugin - it will automatically load settings on startup
         // and save them when they change
         .add_plugins(
-            SettingsPlugin::new("AudioSettings")
-                .format(SerializationFormat::Json)
-                .with_base_path("config")
+            SettingsPlugin::new()
+                .with_path("config/AudioSettings.json", SerializationFormat::Json)
                 .register::<AudioSettings>(),
         )
         .add_systems(Startup, print_settings)

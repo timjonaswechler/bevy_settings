@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_settings::{Settings, prelude::*};
+use bincode::config::Configuration;
 use serde::{Deserialize, Serialize};
 
 /// Network settings with versioning and migration support
@@ -86,10 +87,9 @@ fn main() {
         .add_plugins(MinimalPlugins)
         // Register multiple settings types - all use the same version
         .add_plugins(
-            SettingsPlugin::new("GameSettings")
-                .format(SerializationFormat::Json)
+            SettingsPlugin::new()
                 .version("2.0.0") // All registered settings use this version
-                .with_base_path("config")
+                .with_path("config/migration.json", SerializationFormat::Json)
                 .register::<NetworkSettings>()
                 .register::<GameSettings>(),
         )

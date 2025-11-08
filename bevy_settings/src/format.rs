@@ -6,13 +6,3 @@ pub enum SerializationFormat {
     /// Binary format using bincode - compact and efficient
     Binary,
 }
-
-impl SerializationFormat {
-    /// Get the file extension for this format
-    pub fn extension(&self) -> &'static str {
-        match self {
-            SerializationFormat::Json => "json",
-            SerializationFormat::Binary => "bin",
-        }
-    }
-}

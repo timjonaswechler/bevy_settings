@@ -42,19 +42,13 @@ pub struct SettingsPlugin {
 }
 
 impl SettingsPlugin {
-    pub fn new(name: impl Into<String>) -> Self {
+    pub fn new() -> Self {
         // Default to package version
-        let storage = Storage::new(name.into(), SerializationFormat::Json)
-            .with_version(env!("CARGO_PKG_VERSION"));
+        let storage = Storage::new().with_version(env!("CARGO_PKG_VERSION"));
         Self {
             storage,
             handlers: Vec::new(),
         }
-    }
-
-    pub fn format(mut self, format: SerializationFormat) -> Self {
-        self.storage.format = format;
-        self
     }
 
     pub fn version(mut self, version: impl Into<String>) -> Self {
@@ -62,8 +56,8 @@ impl SettingsPlugin {
         self
     }
 
-    pub fn with_base_path(mut self, path: impl Into<String>) -> Self {
-        self.storage = self.storage.with_base_path(path.into());
+    pub fn with_path(mut self, path: impl Into<String>, format: SerializationFormat) -> Self {
+        self.storage = self.storage.with_path(path.into(), format);
         self
     }
 
@@ -76,7 +70,7 @@ impl SettingsPlugin {
 
 impl Default for SettingsPlugin {
     fn default() -> Self {
-        Self::new("Settings")
+        Self::new()
     }
 }
 

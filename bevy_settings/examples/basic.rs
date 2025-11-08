@@ -48,9 +48,8 @@ fn main() {
         .add_plugins(DefaultPlugins)
         // Add settings plugin - registers multiple settings types in one file
         .add_plugins(
-            SettingsPlugin::new("GameSettings")
-                .format(SerializationFormat::Json)
-                .with_base_path("config")
+            SettingsPlugin::new()
+                .with_path("config/basic.json", SerializationFormat::Json)
                 .register::<GameSettings>()
                 .register::<GraphicsSettings>(),
         )

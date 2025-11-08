@@ -13,25 +13,24 @@ const BINARY_BUFFER_SIZE: usize = 1024 * 1024;
 #[derive(Clone)]
 pub(crate) struct Storage {
     pub(crate) format: SerializationFormat,
-    pub(crate) base_path: PathBuf,
-    pub(crate) filename: String,
+    pub(crate) file_path: PathBuf,
     pub(crate) version: Option<String>,
 }
 
 impl Storage {
     /// Create a new storage with the specified format
-    pub(crate) fn new(filename: impl Into<String>, format: SerializationFormat) -> Self {
+    pub(crate) fn new() -> Self {
         Self {
-            format,
-            base_path: PathBuf::from("settings"),
-            filename: filename.into(),
+            format: SerializationFormat::Json,
+            file_path: PathBuf::from("settings.json"),
             version: None,
         }
     }
 
     /// Set the base path for settings files
-    pub(crate) fn with_base_path(mut self, path: impl AsRef<Path>) -> Self {
-        self.base_path = path.as_ref().to_path_buf();
+    pub(crate) fn with_path(mut self, path: impl AsRef<Path>, format: SerializationFormat) -> Self {
+        self.format = format;
+        self.file_path = path.as_ref().to_path_buf();
         self
     }
 
@@ -41,17 +40,11 @@ impl Storage {
         self
     }
 
-    /// Get the full path for the settings file
-    fn get_path(&self) -> PathBuf {
-        self.base_path
-            .join(format!("{}.{}", self.filename, self.format.extension()))
-    }
-
     /// Load all settings from the file, returning both settings and version info
     pub(crate) fn load_all_with_versions(
         &self,
     ) -> Result<(Map<String, Value>, Map<String, Value>)> {
-        let path = self.get_path();
+        let path = &self.file_path;
 
         // If file doesn't exist, return empty maps
         if !path.exists() {
@@ -92,7 +85,7 @@ impl Storage {
         settings_map: &HashMap<String, Value>,
         versions: &HashMap<String, String>,
     ) -> Result<()> {
-        let path = self.get_path();
+        let path = &self.file_path;
 
         // If all settings are empty (equal to defaults), delete the file
         if settings_map.is_empty() {

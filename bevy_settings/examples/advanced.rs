@@ -91,10 +91,9 @@ fn main() {
     app.add_plugins(MinimalPlugins)
         // Add multiple settings with storage
         .add_plugins(
-            SettingsPlugin::new("GameSettings")
-                .format(SerializationFormat::Binary)
+            SettingsPlugin::new()
                 .version("0.1.0")
-                .with_base_path("config")
+                .with_path("config/advanced.json", SerializationFormat::Json)
                 .register::<VideoSettings>()
                 .register::<AudioSettings>()
                 .register::<GameplaySettings>(),
