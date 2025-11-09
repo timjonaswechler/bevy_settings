@@ -56,11 +56,13 @@ impl SettingsPlugin {
         self
     }
 
+    #[must_use]
     pub fn with_path(mut self, path: impl Into<String>, format: SerializationFormat) -> Self {
         self.storage = self.storage.with_path(path.into(), format);
         self
     }
 
+    #[must_use]
     pub fn register<T: Settings + 'static>(mut self) -> Self {
         let handler = Box::new(TypedSettingsHandler::<T>::new());
         self.handlers.push(handler);
