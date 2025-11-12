@@ -7,6 +7,7 @@ use crate::{
 use bevy::prelude::*;
 use std::collections::HashMap;
 use std::marker::PhantomData;
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 /// Plugin for managing all settings in Bevy using a fluent builder API with storage.
@@ -57,7 +58,7 @@ impl SettingsPlugin {
     }
 
     #[must_use]
-    pub fn with_path(mut self, path: impl Into<String>, format: SerializationFormat) -> Self {
+    pub fn with_path(mut self, path: impl Into<PathBuf>, format: SerializationFormat) -> Self {
         self.storage = self.storage.with_path(path.into(), format);
         self
     }
