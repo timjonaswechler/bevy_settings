@@ -7,14 +7,14 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-bevy = { workspace = true , features= ["bevy_log"]}
+bevy = { version = "0.17.2", default-features = false  , features= ["bevy_log"]}
 bevy_settings_derive = { path = "../bevy_settings_derive" }
-serde = { workspace = true }
-serde_json = { workspace = true }
-bincode = { workspace = true, features = ["serde"] }
-thiserror = { workspace = true }
-semver = { workspace = true }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+bincode = { version = "2.0.0-rc.3", features = ["serde"] }
+thiserror = "1.0"
+semver = { version = "1.0", features = ["serde"] }
 
 # For examples only
 [dev-dependencies]
-bevy = { workspace = true, features = ["bevy_render", "bevy_core_pipeline"] }
+bevy = { version = "0.17.2", default-features = false , features = ["bevy_render", "bevy_core_pipeline"] }
