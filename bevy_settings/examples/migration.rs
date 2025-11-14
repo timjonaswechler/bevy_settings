@@ -1,6 +1,5 @@
 use bevy::prelude::*;
-use bevy_settings::{Settings, prelude::*};
-use bincode::config::Configuration;
+use bevy_settings::{prelude::*, Settings};
 use serde::{Deserialize, Serialize};
 
 /// Network settings with versioning and migration support
