@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_settings::{prelude::*, Settings};
+use bevy_settings::{Settings, prelude::*};
 use serde::{Deserialize, Serialize};
 
 /// Network settings with versioning and migration support
