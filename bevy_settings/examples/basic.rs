@@ -66,14 +66,14 @@ fn setup(
     info!("  R - Reset to defaults");
     info!("  ESC - Exit");
 
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn(Camera2d::default());
 }
 
 fn handle_input(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut game_settings: ResMut<GameSettings>,
     mut graphics_settings: ResMut<GraphicsSettings>,
-    mut exit: EventWriter<AppExit>,
+    mut exit: MessageWriter<AppExit>,
 ) {
     // Toggle volume
     if keyboard.just_pressed(KeyCode::KeyV) {
@@ -107,7 +107,7 @@ fn handle_input(
 
     // Exit
     if keyboard.just_pressed(KeyCode::Escape) {
-        exit.send(AppExit::Success);
+        exit.write(AppExit::Success);
     }
 }
 
