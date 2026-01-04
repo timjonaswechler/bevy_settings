@@ -87,7 +87,7 @@ fn modify_settings(
     mut modified: Local<bool>,
 ) {
     // Only modify once, after a short delay
-    if !*modified && time.elapsed_seconds() > 0.1 {
+    if !*modified && time.elapsed_secs() > 0.1 {
         *modified = true;
 
         // Modify game settings
@@ -112,7 +112,7 @@ fn modify_settings(
 }
 
 fn check_and_exit(time: Res<Time>) {
-    if time.elapsed_seconds() > 2.0 {
+    if time.elapsed_secs() > 2.0 {
         println!("Settings have been saved. Exiting...");
         std::process::exit(0);
     }
