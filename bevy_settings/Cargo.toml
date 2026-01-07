@@ -7,8 +7,10 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+bevy_settings_meta = { path = "../bevy_settings_meta", optional = true }
+bevy_settings_derive = { path = "../bevy_settings_derive", optional = true }
+
 bevy = { workspace = true }
-bevy_settings_derive = { path = "../bevy_settings_derive" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 bincode = { workspace = true, features = ["serde"] }
@@ -17,3 +19,8 @@ thiserror = { workspace = true }
 # For examples only
 [dev-dependencies]
 bevy = { workspace = true, features = ["bevy_render", "bevy_core_pipeline"] }
+
+[features]
+meta = ["bevy_settings_meta"]
+derive = ["bevy_settings_derive"]
+

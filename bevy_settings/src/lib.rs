@@ -15,3 +15,11 @@ pub use trait_def::Settings;
 pub mod prelude {
     pub use crate::{SerializationFormat, Settings, SettingsError, SettingsPlugin};
 }
+
+#[cfg(feature = "meta")]
+pub use bevy_settings_meta::{
+    LocalizedText, SettingDescriptor, SettingKind, SettingsError, UiHint,
+};
+
+#[cfg(feature = "derive")]
+pub use bevy_settings_derive::Settings;
