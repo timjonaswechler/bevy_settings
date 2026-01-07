@@ -1,4 +1,3 @@
-pub use bevy_settings_derive::Settings;
 
 mod error;
 mod format;
@@ -20,6 +19,3 @@ pub mod prelude {
 pub use bevy_settings_meta::{
     LocalizedText, SettingDescriptor, SettingKind, SettingsError, UiHint,
 };
-
-#[cfg(feature = "derive")]
-pub use bevy_settings_derive::Settings;
