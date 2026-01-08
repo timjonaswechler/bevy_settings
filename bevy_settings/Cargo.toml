@@ -21,10 +21,8 @@ bevy_paths = { path = "../../bevy_paths/bevy_paths" }
 
 # For examples and tests
 [dev-dependencies]
-bevy = { workspace = true, features = ["bevy_render", "bevy_core_pipeline"] }
+bevy = { workspace = true, default-features = true }
 
 [features]
 default = []
 meta = ["bevy_settings_meta"]
-
-

@@ -54,6 +54,8 @@ pub fn save_settings_logic<T: SettingsGroup>(world: &mut World) -> Result<()> {
     let registry = world.resource::<PathRegistry>();
     let settings = world.resource::<T>();
 
+    ensure_path_params_present(settings)?;
+
     let path = registry.resolve(settings);
     let delta = compute_delta(settings);
 
@@ -92,6 +94,42 @@ pub fn save_settings_logic<T: SettingsGroup>(world: &mut World) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn ensure_path_params_present<T: SettingsGroup>(settings: &T) -> Result<()> {
+    let params = T::path_params();
+    if params.is_empty() {
+        return Ok(());
+    }
+
+    let value =
+        serde_json::to_value(settings).map_err(|e| ManagerError::Serialization(e.to_string()))?;
+
+    let map = value
+        .as_object()
+        .ok_or_else(|| ManagerError::Path("settings structure is not an object".to_string()))?;
+
+    for param in params {
+        let Some(val) = map.get(*param) else {
+            return Err(ManagerError::Path(format!("missing path param '{param}'")));
+        };
+
+        if is_empty_path_value(val) {
+            return Err(ManagerError::Path(format!(
+                "path param '{param}' must not be empty"
+            )));
+        }
+    }
+
+    Ok(())
+}
+
+fn is_empty_path_value(value: &Value) -> bool {
+    match value {
+        Value::Null => true,
+        Value::String(s) => s.trim().is_empty(),
+        _ => false,
+    }
 }
 
 fn decode_content(content: &[u8], format: &str) -> Result<Value> {
