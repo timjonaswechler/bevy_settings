@@ -14,7 +14,10 @@ bevy = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 bincode = { workspace = true, features = ["serde"] }
+toml = "0.8"
+ron = "0.8"
 thiserror = { workspace = true }
+bevy_paths = { path = "../../bevy_paths/bevy_paths" }
 
 # For examples and tests
 [dev-dependencies]

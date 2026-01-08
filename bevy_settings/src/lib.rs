@@ -1,18 +1,21 @@
-
+mod commands;
+mod delta;
 mod error;
-mod format;
+mod group;
+mod manager;
 mod plugin;
-mod storage;
-mod trait_def;
 
+pub use commands::SettingsCommandsExt;
+pub use delta::{compute_delta, merge_with_defaults};
 pub use error::SettingsError;
-pub use format::SerializationFormat;
+pub use group::SettingsGroup;
 pub use plugin::SettingsPlugin;
-pub use trait_def::Settings;
 
 /// Re-export commonly used types
 pub mod prelude {
-    pub use crate::{SerializationFormat, Settings, SettingsError, SettingsPlugin};
+    pub use crate::{SettingsCommandsExt, SettingsError, SettingsGroup, SettingsPlugin};
+    pub use bevy_paths::prelude::*;
+    pub use bevy_settings_derive::SettingsGroup; // Re-export bevy_paths so user has everything
 }
 
 #[cfg(feature = "meta")]
