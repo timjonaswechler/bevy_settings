@@ -1,11 +1,9 @@
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 use serde_json::{Map, Value};
 
 use crate::error::Result;
 
-/// Compute delta between current settings and defaults
-/// Returns None if settings equal defaults, otherwise returns a Value with only changed fields
-pub fn compute_delta<T>(settings: &T) -> Option<Value>
+pub(crate) fn compute_delta<T>(settings: &T) -> Option<Value>
 where
     T: Serialize + Default + PartialEq,
 {
@@ -64,7 +62,7 @@ fn compute_value_delta(current: &Value, default: &Value) -> Option<Value> {
 }
 
 /// Merge delta with defaults to get complete settings
-pub fn merge_with_defaults<T>(delta: Option<&Value>) -> Result<T>
+pub(crate) fn merge_with_defaults<T>(delta: Option<&Value>) -> Result<T>
 where
     T: DeserializeOwned + Default + Serialize,
 {

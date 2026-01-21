@@ -1,8 +1,32 @@
-use crate::SettingsGroup;
+use crate::SettingsGroupTrait;
 use bevy::prelude::*;
 use bevy::reflect::GetTypeRegistration;
 
-/// Plugin for managing settings groups.
+/// Plugin for managing settings groups in Bevy.
+///
+/// This plugin provides functionality for loading, saving, and auto-saving settings groups.
+/// It registers settings groups as Bevy resources and sets up systems for automatic persistence.
+///
+/// # Examples
+/// ```no_run
+/// use bevy::prelude::*;
+/// use bevy_settings::{SettingsPlugin, SettingsGroup};
+/// use bevy_paths::prelude::*;
+/// use serde::{Serialize, Deserialize};
+///
+/// #[derive(SettingsGroup, Serialize, Deserialize, Resource, Clone, PartialEq, Reflect, Default)]
+/// #[serde(default)]
+/// #[settings("settings/graphics.json")]
+/// struct GraphicsSettings {
+///     resolution: String,
+///     vsync: bool,
+/// }
+///
+/// fn main() {
+///     App::new()
+///         .add_plugins((MinimalPlugins, SettingsPlugin::default().register::<GraphicsSettings>()));
+/// }
+/// ```
 pub struct SettingsPlugin {
     registrations: Vec<Box<dyn Fn(&mut App) + Send + Sync>>,
 }
@@ -17,7 +41,7 @@ impl Default for SettingsPlugin {
 
 impl SettingsPlugin {
     /// Registers a settings group type.
-    pub fn register<T: SettingsGroup + Reflect + GetTypeRegistration>(mut self) -> Self {
+    pub fn register<T: SettingsGroupTrait + Reflect + GetTypeRegistration>(mut self) -> Self {
         self.registrations.push(Box::new(|app| {
             app.register_type::<T>();
             app.init_resource::<T>();
@@ -31,10 +55,6 @@ impl SettingsPlugin {
 
 impl Plugin for SettingsPlugin {
     fn build(&self, app: &mut App) {
-        if !app.is_plugin_added::<bevy_paths::PathRegistryPlugin>() {
-            warn!("PathRegistryPlugin is not added. Settings paths might not resolve correctly.");
-        }
-
         for registration in &self.registrations {
             registration(app);
         }

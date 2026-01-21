@@ -1,72 +1,55 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, Attribute, DeriveInput, Lit, Meta};
+use syn::{Attribute, DeriveInput, Lit, Meta, parse_macro_input};
 
 #[proc_macro_derive(SettingsGroup, attributes(settings))]
 pub fn derive_settings_group(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
-
-    // 1. Parse #[settings(file = "...")]
+    // 1. Parse #[settings("...")]
     let template = parse_settings_attribute(&input.attrs)
-        .expect("Missing or invalid #[settings(file = \"...\")] attribute");
-
-    // 2. Extract params from template string (e.g. "{id}" -> "id")
+        .expect("Missing or invalid #[settings(\"...\")] attribute");
+    // 2. Extract params from template string
     let params = extract_params(&template);
-
     // 3. Generate the implementation
     let expanded = quote! {
-        // Implement SettingsGroup
-        impl bevy_settings::SettingsGroup for #name {
+        // Implement bevy_paths::TypedPath
+        impl bevy_paths::TypedPath for #name {
+            const TEMPLATE: &'static str = #template;
+            const PLACEHOLDERS: &'static [&'static str] = &[#(#params),*];
+        }
+        // Implement SettingsGroupTrait
+        impl bevy_settings::SettingsGroupTrait for #name {
             fn path_params() -> &'static [&'static str] {
                 &[#(#params),*]
             }
         }
-
-        // Also implement TypedPath automatically (from bevy_paths)
-        impl bevy_paths::TypedPath for #name {
-            fn template() -> &'static str {
-                #template
-            }
-        }
     };
-
     TokenStream::from(expanded)
 }
 
+/// Parse #[settings("...")]
 fn parse_settings_attribute(attrs: &[Attribute]) -> Option<String> {
     for attr in attrs {
         if attr.path().is_ident("settings") {
-            // Case A: #[settings(file = "...")]
+            // Case 1: #[settings("path")]
             if let Meta::List(list) = &attr.meta {
-                // We need to parse the nested key-value pairs manually or use syn helpers
-                // But syn::Meta::List doesn't easily give key-values without `syn` features "extra-traits" sometimes
-                // Let's try parsing tokens as MetaNameValue if possible, or iterate
-                // Ideally we want to parse `file = "..."` inside the parens.
-
-                // Simplified approach: convert tokens to string and regex/find? No, too fragile.
-                // Better: Use `syn::parse2` to parse the content as `Meta`
-
-                // For now, let's support the simple case where the content is just `file = "..."`
-                // Actually, standard practice is comma separated Meta.
-
-                // Let's try to parse the nested meta
-                let nested_metas = list
-                    .parse_args_with(
-                        syn::punctuated::Punctuated::<Meta, syn::Token![,]>::parse_terminated,
-                    )
-                    .ok()?;
-
-                for meta in nested_metas {
-                    if let Meta::NameValue(nv) = meta {
-                        if nv.path.is_ident("file") {
-                            if let syn::Expr::Lit(expr_lit) = &nv.value {
-                                if let Lit::Str(lit_str) = &expr_lit.lit {
-                                    return Some(lit_str.value());
-                                }
-                            }
-                        }
-                    }
+                if let Ok(syn::Expr::Lit(syn::ExprLit {
+                    lit: Lit::Str(lit_str),
+                    ..
+                })) = list.parse_args()
+                {
+                    return Some(lit_str.value());
+                }
+            }
+            // Case 2: #[settings = "path"]
+            if let Meta::NameValue(nv) = &attr.meta {
+                if let syn::Expr::Lit(syn::ExprLit {
+                    lit: Lit::Str(lit_str),
+                    ..
+                }) = &nv.value
+                {
+                    return Some(lit_str.value());
                 }
             }
         }

@@ -3,9 +3,28 @@ use serde_json::Value;
 use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+/// A localized text entry for settings metadata.
+///
+/// Used to provide human-readable labels, descriptions, and tooltips for settings.
+/// Supports fallback values for cases where the localization key is not available.
+///
+/// # Examples
+/// ```
+/// use bevy_settings_meta::LocalizedText;
+///
+/// let label = LocalizedText {
+///     key: "settings.server.port.label".to_string(),
+///     fallback: Some("Port".to_string()),
+/// };
+/// ```
 pub struct LocalizedText {
-    /// e.g. "settings.server.port.label"
+    /// The localization key for this text entry.
+    ///
+    /// Example: `"settings.server.port.label"`.
     pub key: String,
+    /// A fallback value to use if the localization key is not found.
+    ///
+    /// If `None`, the key itself may be displayed as a fallback.
     pub fallback: Option<String>,
 }
 
@@ -126,11 +145,28 @@ impl SettingKind {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
+/// UI hints for rendering settings controls.
+///
+/// Used to guide the UI layer on how to render a setting (e.g., as a slider, dropdown, or toggle).
+/// This ensures a consistent and user-friendly experience across different platforms.
+///
+/// # Examples
+/// ```
+/// use bevy_settings_meta::UiHint;
+///
+/// // Render a boolean setting as a toggle switch.
+/// let hint = UiHint::Toggle;
+/// ```
 pub enum UiHint {
+    /// A slider control for numeric settings (e.g., volume or brightness).
     Slider,
+    /// A numeric input field for precise values.
     NumberInput,
+    /// A dropdown menu for enumerated settings.
     Dropdown,
+    /// A toggle switch for boolean settings.
     Toggle,
+    /// A password field for sensitive text input.
     Password,
 }
 
@@ -152,11 +188,26 @@ pub struct SettingDescriptor {
     pub meta: HashMap<String, Value>,
 }
 
-/// Fehler, die beim set_by_key auftreten können
-#[derive(Debug)]
+/// Errors that can occur during setting validation or manipulation.
+///
+/// Used to provide detailed feedback when a setting value is invalid or inaccessible.
+///
+/// # Examples
+/// ```
+/// use bevy_settings_meta::SettingsError;
+/// use serde_json::json;
+///
+/// // Simulate a type mismatch error.
+/// let error = SettingsError::TypeMismatch;
+/// assert_eq!(error.to_string(), "type mismatch");
+/// ```
+#[derive(Debug, PartialEq)]
 pub enum SettingsError {
+    /// The requested setting key does not exist.
     UnknownKey,
+    /// The provided value does not match the expected type.
     TypeMismatch,
+    /// The value violates constraints (e.g., out of bounds or invalid format).
     ValidationFailed(String),
 }
 
@@ -170,6 +221,26 @@ impl std::fmt::Display for SettingsError {
     }
 }
 
-impl std::error::Error for SettingsError {}
+impl std::error::Error for SettingsError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_settings_error_display() {
+        assert_eq!(SettingsError::UnknownKey.to_string(), "unknown key");
+        assert_eq!(SettingsError::TypeMismatch.to_string(), "type mismatch");
+        assert_eq!(
+            SettingsError::ValidationFailed("out of bounds".to_string()).to_string(),
+            "validation failed: out of bounds"
+        );
+    }
+}
 
 // Test: integer valid/invalid, numeric string parsing, float, text length, enum by label and by value.

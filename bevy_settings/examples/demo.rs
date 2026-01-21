@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_settings::prelude::*; // Import everything
+use bevy_settings::*; // Import everything
 use serde::{Deserialize, Serialize};
 
 // --- User Code ---
@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 // 1. Definition einer Settings-Gruppe
 #[derive(SettingsGroup, Resource, Serialize, Deserialize, Default, Clone, Reflect, PartialEq)]
 #[reflect(Resource)]
-#[settings(file = "settings/global.toml")]
+#[settings("settings/global.toml")]
 struct GlobalSettings {
     audio: AudioConfig,
     graphics: GraphicsConfig,
@@ -28,7 +28,7 @@ struct GraphicsConfig {
 // 2. Definition einer dynamischen Gruppe (Savegame)
 #[derive(SettingsGroup, Resource, Serialize, Deserialize, Default, Clone, Reflect, PartialEq)]
 #[reflect(Resource)]
-#[settings(file = "saves/{slot_id}/game.json")]
+#[settings("saves/{slot_id}/game.json")]
 struct SaveGame {
     // Parameter wird automatisch erkannt und beim Speichern gefiltert
     slot_id: String,
@@ -47,10 +47,6 @@ struct InventoryData {
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        // WICHTIG: Path Registry muss da sein
-        .add_plugins(bevy_paths::prelude::PathRegistryPlugin::new(
-            "MyStudio", "MyGame", "App",
-        ))
         .add_plugins(
             SettingsPlugin::default()
                 .register::<GlobalSettings>()

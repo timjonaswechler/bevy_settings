@@ -1,285 +1,242 @@
 # bevy_settings
 
-A settings management system for [Bevy](https://bevyengine.org/) that:
-- 🎯 Manages settings as Bevy resources
-- 💾 Persists only deviations from default values (delta persistence)
-- 📦 Supports JSON and binary (bincode) serialization formats
-- 🚀 Provides a derive macro to reduce boilerplate
-- 🔄 Automatically saves settings when they change
+Persistent settings for **Bevy** resources with:
 
-## Features
+- **Delta encoding**: only store values that differ from `Default` (small, human-friendly files)
+- **Path templates**: store settings via a `bevy_paths::TypedPath` template (supports `{param}` placeholders)
+- **Auto-save**: resources are persisted automatically when they change
+- **Multiple file formats**: `json`, `toml`, `ron`, and `bin` (bincode)
 
-- **Delta Persistence**: Only values that differ from defaults are saved to disk, keeping settings files minimal
-- **Multiple Formats**: Choose between human-readable JSON or compact binary format
-- **Automatic Saving**: Settings are automatically saved when modified
-- **Type-Safe**: Full Rust type safety with derive macros
-- **Bevy Integration**: Works seamlessly with Bevy's resource system
+This repository is a small workspace:
+
+- `bevy_settings`: the runtime crate (Bevy plugin, load/save logic, delta encoding)
+- `bevy_settings_derive`: the proc-macro crate providing `#[derive(SettingsGroup)]`
+- `bevy_settings_meta` (optional): metadata types for UI hints / localization and validation (feature-gated)
+
+> Current workspace version: `0.1.1`
+> Bevy version used in this workspace: `0.17.3`
+
+---
+
+## Why this crate?
+
+Most games/apps have a bunch of settings resources:
+graphics, audio, input bindings, save-game slots, etc.
+
+`bevy_settings` lets you model each settings file as a **plain Bevy resource**, and handles:
+
+- where it is saved (via a path template)
+- what is saved (delta to defaults)
+- when it is saved (automatic on change, plus manual triggers)
+
+---
+
+## Core concepts
+
+### 1) Settings group = one file
+
+A “settings group” is a single Bevy resource that maps to one file on disk.
+
+You define it by deriving `SettingsGroup` and providing a path template:
+
+- `#[settings("settings/global.toml")]` (static path)
+- `#[settings("saves/{slot_id}/game.json")]` (dynamic path; `{slot_id}` comes from a struct field)
+
+### 2) Path parameters
+
+If your template contains placeholders (e.g. `{slot_id}`), the derive macro:
+
+- extracts `slot_id` as a *path parameter*
+- registers it via `SettingsGroupTrait::path_params()`
+
+On save, path parameter fields are **removed from the serialized payload** (they belong in the path).
+On load, path parameter fields are **preserved** from the current resource.
+
+### 3) Delta encoding
+
+When saving, `bevy_settings` serializes:
+
+- `T::default()` and current settings `T`
+- computes a “delta” object containing only changed fields
+
+If the delta would be empty, the file is removed (if it exists).
+
+---
 
 ## Installation
 
-Add to your `Cargo.toml`:
+This workspace depends on a local sibling crate `bevy_paths` (path dependency). If you want to use `bevy_settings` outside of this repo, you’ll need `bevy_paths` available as well.
+
+In your `Cargo.toml`:
 
 ```toml
 [dependencies]
-bevy_settings = "0.1"
+bevy_settings = "0.1.1"
 ```
 
-## Quick Start
+If you use this repository as a git dependency or path dependency, ensure `bevy_paths` is resolvable.
+
+---
+
+## Quick start
+
+### 1) Define a settings resource
 
 ```rust
 use bevy::prelude::*;
-use bevy_settings::{prelude::*, Settings};
+use bevy_settings::*;
 use serde::{Deserialize, Serialize};
 
-// Define your settings structs
-#[derive(Settings, Resource, Serialize, Deserialize, Default, Clone, PartialEq)]
-struct GameSettings {
-    volume: f32,
-    resolution: (u32, u32),
-    fullscreen: bool,
+#[derive(SettingsGroup, Resource, Serialize, Deserialize, Default, Clone, Reflect, PartialEq)]
+#[reflect(Resource)]
+#[settings("settings/global.toml")]
+struct GlobalSettings {
+    audio: AudioConfig,
+    graphics: GraphicsConfig,
 }
 
-#[derive(Settings, Resource, Serialize, Deserialize, Default, Clone, PartialEq)]
-struct GraphicsSettings {
-    quality: i32,
+#[derive(Serialize, Deserialize, Default, Clone, Reflect, PartialEq)]
+struct AudioConfig {
+    volume: f32,
+    muted: bool,
 }
+
+#[derive(Serialize, Deserialize, Default, Clone, Reflect, PartialEq)]
+struct GraphicsConfig {
+    resolution_scale: f32,
+    fullscreen: bool,
+}
+```
+
+### 2) Add plugins and register your group
+
+`bevy_settings` relies on `bevy_paths` to resolve `TypedPath` templates, so make sure the path registry plugin is installed.
+
+```rust
+use bevy::prelude::*;
+use bevy_settings::*;
+use bevy_paths::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        // Register all settings with a single plugin - creates one unified file
-        .add_plugins(
-            SettingsPlugin::new("GameSettings")
-                .format(SerializationFormat::Json)
-                .version("0.1.0")
-                .with_base_path("config")
-                .register::<GameSettings>()
-                .register::<GraphicsSettings>()
-        )
+        .add_plugins(PathRegistryPlugin::new("MyStudio", "MyGame", "App"))
+        .add_plugins(SettingsPlugin::default().register::<GlobalSettings>())
         .run();
 }
 ```
 
-That's it! Your settings will be:
-- Stored in a single unified file `config/GameSettings.json`
-- Loaded on startup (or defaults if file doesn't exist)
-- Automatically saved when modified
-- Only stored if they differ from defaults
+### 3) Load/save at runtime (optional)
 
-The file will look like:
-```json
-{
-  "version": "0.1.0",
-  "gamesettings": {
-    "volume": 0.8,
-    "resolution": [1920, 1080],
-    "fullscreen": true
-  },
-  "graphicssettings": {
-    "quality": 2
-  }
+You can trigger load/save explicitly via `Commands`:
+
+```rust
+fn load_on_startup(mut commands: Commands) {
+    commands.load_settings::<GlobalSettings>();
+}
+
+fn save_now(mut commands: Commands) {
+    commands.save_settings::<GlobalSettings>();
 }
 ```
 
-## Usage
+### 4) Auto-save on changes
 
-### Defining Settings
+When you register a type, the plugin adds an auto-save system in `PostUpdate`:
 
-Settings must implement several traits. The `Settings` derive macro handles this automatically:
+- if the resource `T` is `changed` (and not just `added`), it queues a save.
+
+---
+
+## Dynamic paths (save slots)
+
+Example of a per-slot save file:
 
 ```rust
-#[derive(Settings, Resource, Serialize, Deserialize, Default, Clone, PartialEq)]
-struct MySettings {
-    value: i32,
+use bevy::prelude::*;
+use bevy_settings::*;
+use serde::{Deserialize, Serialize};
+
+#[derive(SettingsGroup, Resource, Serialize, Deserialize, Default, Clone, Reflect, PartialEq)]
+#[reflect(Resource)]
+#[settings("saves/{slot_id}/game.json")]
+struct SaveGame {
+    slot_id: String, // used for path resolution, not persisted in file
+    inventory: InventoryData,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone, Reflect, PartialEq)]
+struct InventoryData {
+    gold: u32,
+    items: Vec<String>,
 }
 ```
 
-Required trait implementations:
-- `Settings` - Our derive macro
-- `Resource` - Bevy resource
-- `Serialize` + `Deserialize` - Serde serialization
-- `Default` - Provides default values
-- `Clone` - For copying settings
-- `PartialEq` - For detecting changes from defaults
+Important behavior:
 
-### Adding to Your App
+- `slot_id` must be present and non-empty when saving (validated at runtime)
+- when loading, `slot_id` is preserved from the current resource, so selecting a slot is simply:
+  set `slot_id`, then call `load_settings::<SaveGame>()`
 
-```rust
-use bevy_settings::{SettingsPlugin, SerializationFormat};
+There is a runnable example in this repository:
+`bevy_settings/bevy_settings/examples/demo.rs`.
 
-App::new()
-    .add_plugins(
-        SettingsPlugin::new("GameSettings")
-            .format(SerializationFormat::Json)
-            .version("0.1.0")
-            .with_base_path("config")
-            .register::<MySettings>()
-    )
-    .run();
-```
+---
 
-### Custom Settings Path
+## Supported formats
 
-```rust
-SettingsPlugin::new("GameSettings")
-    .format(SerializationFormat::Json)
-    .with_base_path("custom/path")
-    .register::<MySettings>()
-```
+The file format is inferred from the file extension of the resolved path:
 
-### Reading Settings
+- `.json` → JSON (pretty-printed)
+- `.toml` → TOML (pretty)
+- `.ron` → RON (pretty)
+- `.bin` → bincode (binary)
 
-Settings are available as Bevy resources:
+If the extension is missing, it defaults to JSON behavior.
 
-```rust
-fn my_system(settings: Res<MySettings>) {
-    println!("Volume: {}", settings.volume);
-}
-```
+---
 
-### Modifying Settings
+## Crate overview
 
-Modify settings like any Bevy resource. They'll be automatically saved:
+### `bevy_settings`
 
-```rust
-fn modify_settings(mut settings: ResMut<MySettings>) {
-    settings.volume = 0.8;
-    // Settings will be saved automatically!
-}
-```
+Key public API:
 
-### Delta Persistence
+- `SettingsPlugin`: registers settings resources and auto-save systems
+- `SettingsCommandsExt`: `Commands::load_settings::<T>()` / `Commands::save_settings::<T>()`
+- `SettingsGroupTrait`: trait implemented by the derive macro (ties together resource + serde + `TypedPath`)
 
-The system only saves values that differ from defaults:
+### `bevy_settings_derive`
 
-```rust
-// If settings equal defaults, no file is created
-let defaults = MySettings::default();
-// File is deleted if it exists
+Provides:
 
-// If settings differ from defaults, only those fields are saved
-let modified = MySettings { volume: 0.5, ..default() };
-// Only the "volume" field will be saved to the file
-```
+- `#[derive(SettingsGroup)]` + attribute `#[settings("...")]`
 
-## Serialization Formats
+Generates implementations for:
 
-### JSON (Human-Readable)
+- `bevy_settings::SettingsGroupTrait`
+- `bevy_paths::TypedPath`
 
-```rust
-SerializationFormat::Json
-```
+---
 
-Creates human-readable `.json` files with all registered settings in a unified structure:
-```json
-{
-  "version": "0.1.0",
-  "mysettings": {
-    "volume": 0.8,
-    "resolution": [1920, 1080],
-    "fullscreen": true
-  }
-}
-```
+## Feature flags
 
-### Binary (Compact)
+`bevy_settings`:
 
-```rust
-SerializationFormat::Binary
-```
+- `meta`: enables re-exports from `bevy_settings_meta` (metadata types like `SettingDescriptor`, `UiHint`, etc.)
 
-Creates compact `.bin` files using [bincode](https://github.com/bincode-org/bincode).
+---
 
-## Examples
+## Roadmap / Known limitations
 
-### Multiple Settings
+See `todo.md` for current priorities, including:
 
-You can register multiple settings types with a single plugin, and they'll all be saved to one unified file:
+- a way to mark groups as transient / not persisted
+- preventing duplicate registrations from adding duplicate auto-save systems
+- settings migration/versioning support for struct changes
 
-```rust
-#[derive(Settings, Resource, Serialize, Deserialize, Default, Clone, PartialEq)]
-struct GameSettings { /* ... */ }
-
-#[derive(Settings, Resource, Serialize, Deserialize, Default, Clone, PartialEq)]
-struct GraphicsSettings { /* ... */ }
-
-App::new()
-    .add_plugins(
-        SettingsPlugin::new("GameSettings")
-            .format(SerializationFormat::Json)
-            .version("0.1.0")
-            .with_base_path("config")
-            .register::<GameSettings>()
-            .register::<GraphicsSettings>()
-    )
-    .run();
-```
-
-This creates a single file `config/GameSettings.json`:
-```json
-{
-  "version": "0.1.0",
-  "gamesettings": { /* ... */ },
-  "graphicssettings": { /* ... */ }
-}
-```
-
-### Reacting to Changes
-
-Use Bevy's change detection:
-
-```rust
-fn on_settings_change(settings: Res<MySettings>) {
-    if settings.is_changed() && !settings.is_added() {
-        println!("Settings changed!");
-        // Apply settings to your game
-    }
-}
-```
-
-## Examples
-
-Run the examples:
-
-```bash
-# Simple automated example
-cargo run --example simple
-
-# Basic interactive example
-cargo run --example basic
-
-# Advanced example with nested structs, enums, and multiple formats
-cargo run --example advanced
-
-# New API example showing the simplified registration
-cargo run --example new_api
-```
-
-## How It Works
-
-1. **Startup**: The plugin loads settings from a unified file on disk, or uses defaults if the file doesn't exist
-2. **Runtime**: Settings are available as Bevy resources
-3. **Modification**: When settings are modified (via `ResMut`), Bevy's change detection triggers
-4. **Persistence**: The plugin automatically saves all settings to a single unified file
-5. **Delta Persistence**: Only fields that differ from defaults are saved; if all settings equal defaults, the file is deleted
-
-## API Documentation
-
-For detailed API documentation, run:
-
-```bash
-cargo doc --open
-```
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+---
 
 ## License
 
-Licensed under either of:
-
-- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE) or http://www.apache.org/licenses/LICENSE-2.0)
-- MIT license ([LICENSE-MIT](LICENSE) or http://opensource.org/licenses/MIT)
-
-at your option.
+MIT. See `LICENSE`.
